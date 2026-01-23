@@ -5,10 +5,12 @@ import * as path from 'path';
 import { parse } from '../parser/parser';
 import { exportJsonSchema } from '../exporters/json-schema';
 import { exportTypeScript } from '../exporters/typescript';
+import { exportPydantic } from '../exporters/pydantic';
+import { exportOpenAPI } from '../exporters/openapi';
 
 interface CliOptions {
     output?: string;
-    format?: 'json-schema' | 'typescript';
+    format?: 'json-schema' | 'typescript' | 'pydantic' | 'openapi';
     schemaVersion?: '2020-12' | '2019-09' | 'draft-07';
     help?: boolean;
     version?: boolean;
@@ -16,14 +18,14 @@ interface CliOptions {
 
 function printHelp(): void {
     console.log(`
-ClearSchema CLI v0.5.0
+ClearSchema CLI v1.0.0
 
 Usage:
   clearschema <input-file> [options]
 
 Options:
   -o, --output <file>           Output file (default: stdout)
-  -f, --format <format>         Export format: json-schema, typescript (default: json-schema)
+  -f, --format <format>         Export format: json-schema, typescript, pydantic, openapi (default: json-schema)
   --schema-version <version>    JSON Schema version: 2020-12, 2019-09, draft-07 (default: 2020-12)
   -h, --help                    Show this help message
   -v, --version                 Show version number
@@ -32,12 +34,14 @@ Examples:
   clearschema schema.cs
   clearschema schema.cs -f typescript -o types.ts
   clearschema schema.cs -f json-schema -o schema.json
+  clearschema schema.cs -f pydantic -o models.py
+  clearschema schema.cs -f openapi -o openapi.json
   clearschema schema.cs --schema-version draft-07
 `);
 }
 
 function printVersion(): void {
-    console.log('0.5.0');
+    console.log('1.0.0');
 }
 
 function parseArgs(args: string[]): { inputFile?: string; options: CliOptions } {
@@ -55,10 +59,10 @@ function parseArgs(args: string[]): { inputFile?: string; options: CliOptions } 
             options.output = args[++i];
         } else if (arg === '-f' || arg === '--format') {
             const format = args[++i];
-            if (format === 'json-schema' || format === 'typescript') {
+            if (format === 'json-schema' || format === 'typescript' || format === 'pydantic' || format === 'openapi') {
                 options.format = format;
             } else {
-                console.error(`Error: Invalid format "${format}". Must be: json-schema, typescript`);
+                console.error(`Error: Invalid format "${format}". Must be: json-schema, typescript, pydantic, openapi`);
                 process.exit(1);
             }
         } else if (arg === '--schema-version') {
@@ -139,6 +143,14 @@ function main(): void {
         output = JSON.stringify(jsonSchema, null, 2);
     } else if (format === 'typescript') {
         output = exportTypeScript(schema);
+    } else if (format === 'pydantic') {
+        output = exportPydantic(schema);
+    } else if (format === 'openapi') {
+        const openapi = exportOpenAPI(schema, {
+            title: 'Generated API',
+            version: '1.0.0',
+        });
+        output = JSON.stringify(openapi, null, 2);
     } else {
         console.error(`Error: Unknown format "${format}"`);
         process.exit(1);

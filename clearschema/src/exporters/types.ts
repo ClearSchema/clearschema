@@ -19,6 +19,34 @@ export interface TypeScriptExportOptions extends ExportOptions {
     includeComments?: boolean;
 }
 
+export interface PydanticExportOptions extends ExportOptions {
+    includeComments?: boolean;
+    useTyping?: boolean;
+}
+
+export interface OpenAPIExportOptions extends ExportOptions {
+    title?: string;
+    version?: string;
+    description?: string;
+    serverUrl?: string;
+}
+
+export interface OpenAPISchema {
+    openapi: string;
+    info: {
+        title: string;
+        version: string;
+        description?: string;
+    };
+    servers?: Array<{
+        url: string;
+        description?: string;
+    }>;
+    components: {
+        schemas: Record<string, any>;
+    };
+}
+
 export interface JsonSchema {
     $schema?: string;
     $id?: string;

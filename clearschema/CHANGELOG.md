@@ -5,6 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-01-23
+
+### Added
+
+- **Import Resolution** (Phase 3 Complete)
+  - Async file loading for external schema imports
+  - Circular import detection with clear error messages
+  - Wildcard import support (`- *`)
+  - Name collision detection
+  - Recursive import resolution
+
+- **Reference Resolution** (Phase 3 Complete)
+  - Runtime $ref pointer following
+  - Resolve references to definitions
+  - Support for both `#/$defs/TypeName` and short `TypeName` format
+  - Recursive resolution for nested references
+
+- **Pydantic Exporter** (Phase 5 Complete)
+  - Full Python Pydantic model generation
+  - Smart type mapping (email → EmailStr, uri → HttpUrl, uuid → UUID)
+  - Field constraints (min_length, max_length, ge, le, etc.)
+  - Optional type handling with typing.Optional
+  - Class generation from object types
+  - Support for List, Tuple, Union types
+  - Description and default value export
+
+- **OpenAPI 3.1 Exporter** (Phase 5 Complete)
+  - OpenAPI 3.1.0 specification export
+  - Components/schemas generation from $defs
+  - Server URL configuration
+  - API title, version, and description metadata
+  - Builds on JSON Schema Draft 2020-12
+
+- **CLI Enhancements**
+  - Support for pydantic and openapi export formats
+  - Updated help text with all formats
+  - Version bumped to 1.0.0
+
+### Test Coverage
+- 232 tests passing (27 new tests)
+- Comprehensive tests for import/reference resolution
+- Full Pydantic exporter test suite (20 tests)
+- OpenAPI exporter tests (6 tests)
+- Maintained 93%+ code coverage
+
+### Breaking Changes
+- None - fully backward compatible
+
 ## [0.6.0] - 2026-01-21
 
 ### Added

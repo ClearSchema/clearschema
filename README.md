@@ -4,9 +4,9 @@
 
 Your schema is a contract. Write it in a format humans can read and review. Generate the boring, repetitive code.
 
-[![Version](https://img.shields.io/badge/version-0.6.0-blue.svg)](https://github.com/clearschema/clearschema)
-[![Tests](https://img.shields.io/badge/tests-205%20passing-brightgreen.svg)](https://github.com/clearschema/clearschema)
-[![Coverage](https://img.shields.io/badge/coverage-93.3%25-brightgreen.svg)](https://github.com/clearschema/clearschema)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/clearschema/clearschema)
+[![Tests](https://img.shields.io/badge/tests-232%20passing-brightgreen.svg)](https://github.com/clearschema/clearschema)
+[![Coverage](https://img.shields.io/badge/coverage-93%2B%25-brightgreen.svg)](https://github.com/clearschema/clearschema)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 ---
@@ -92,6 +92,12 @@ clearschema schema.cs -f json-schema -o schema.json
 # Export to TypeScript
 clearschema schema.cs -f typescript -o types.ts
 
+# Export to Pydantic (Python)
+clearschema schema.cs -f pydantic -o models.py
+
+# Export to OpenAPI 3.1
+clearschema schema.cs -f openapi -o openapi.json
+
 # Use different JSON Schema version
 clearschema schema.cs --schema-version draft-07 -o schema.json
 ```
@@ -99,15 +105,34 @@ clearschema schema.cs --schema-version draft-07 -o schema.json
 ### API Usage
 
 ```typescript
-import { parse, exportJsonSchema, exportTypeScript } from 'clearschema';
+import {
+  parse,
+  exportJsonSchema,
+  exportTypeScript,
+  exportPydantic,
+  exportOpenAPI,
+  resolveReferences,
+  resolveImports
+} from 'clearschema';
 
 const schema = parse(`
   name: string.required: Full name
   age: integer: Age
 `);
 
+// Export to different formats
 const jsonSchema = exportJsonSchema(schema);
 const typescript = exportTypeScript(schema);
+const pydantic = exportPydantic(schema);
+const openapi = exportOpenAPI(schema, { title: 'My API', version: '1.0.0' });
+
+// Resolve references
+const resolved = resolveReferences(schema);
+
+// Resolve imports (async)
+const withImports = await resolveImports(schema, {
+  basePath: './schemas'
+});
 ```
 
 ---
@@ -223,16 +248,23 @@ $defs:
 |-------|--------|---------|
 | 1. Core Parser | ✅ Complete | v0.1.0 |
 | 2. Complex Types | ✅ Complete | v0.2.0 |
-| 3. References & Advanced Types | ✅ Complete | v0.3.0 |
+| 3. References & Advanced Types | ✅ Complete | v0.3.0 + v1.0.0 |
 | 4. JSON Schema Export | ✅ Complete | v0.4.0 |
-| 5. TypeScript Exporter | ✅ Complete | v0.5.0 |
+| 5. All Exporters (TS, Pydantic, OpenAPI) | ✅ Complete | v0.5.0 + v1.0.0 |
 | 6. CLI & Tooling | ✅ Complete | v0.6.0 |
 | 7. VS Code Extension | ✅ Complete | v0.7.0 |
 | 8. Documentation | ✅ Complete | v0.8.0 |
 
-**Current Version:** 0.6.0
-**Test Coverage:** 93.3% (205 tests passing)
+**Current Version:** 1.0.0 🎉
+**Test Coverage:** 93%+ (232 tests passing)
 **License:** MIT
+
+**v1.0.0 Highlights:**
+- ✅ Import resolution with circular detection
+- ✅ Reference resolution ($ref following)
+- ✅ Pydantic exporter with smart type mapping
+- ✅ OpenAPI 3.1 exporter
+- ✅ All 8 phases complete
 
 ---
 

@@ -13,6 +13,8 @@ export type { Token, LexerResult } from './lexer/lexer';
 // Exporters
 export { exportJsonSchema, JsonSchemaExporter } from './exporters/json-schema';
 export { exportTypeScript, TypeScriptExporter } from './exporters/typescript';
+export { exportPydantic, PydanticExporter } from './exporters/pydantic';
+export { exportOpenAPI, OpenAPIExporter } from './exporters/openapi';
 export type {
     Exporter,
     ExportOptions,
@@ -20,7 +22,14 @@ export type {
     JsonSchemaField,
     JsonSchemaExportOptions,
     TypeScriptExportOptions,
+    PydanticExportOptions,
+    OpenAPIExportOptions,
+    OpenAPISchema,
 } from './exporters/types';
+
+// Resolvers
+export { resolveImports, resolveReferences } from './resolver/resolver';
+export type { ResolverOptions, ResolvedSchema } from './resolver/resolver';
 
 // AST types
 export type {

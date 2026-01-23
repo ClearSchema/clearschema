@@ -84,7 +84,7 @@ First working export target.
 ---
 
 ### Phase 5: Additional Exporters
-**Status:** 🔄 In Progress (v0.5.0 - TypeScript complete)
+**Status:** ✅ Complete (v1.0.0)
 
 Multi-target code generation.
 
