@@ -1,0 +1,36 @@
+{
+  "name": "clearschema",
+  "displayName": "ClearSchema",
+  "description": "Syntax highlighting for ClearSchema - a human-friendly schema language",
+  "version": "0.1.0",
+  "publisher": "clearschema",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "clearschema",
+        "aliases": [
+          "ClearSchema",
+          "clearschema"
+        ],
+        "extensions": [
+          ".cs",
+          ".clearschema"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "clearschema",
+        "scopeName": "source.clearschema",
+        "path": "./syntaxes/clearschema.tmLanguage.json"
+      }
+    ]
+  }
+}

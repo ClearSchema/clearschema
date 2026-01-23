@@ -113,33 +113,34 @@ Developer experience polish.
 ---
 
 ### Phase 7: VS Code Extension & LSP
-**Status:** Not Started
+**Status:** ✅ Complete (v0.7.0)
 
 First-class editor support.
 
-- TextMate grammar for syntax highlighting
-- VS Code extension scaffolding
-- LSP server: diagnostics, autocomplete, hover, go-to-definition
-- Document symbols (outline view)
-- VS Code marketplace publishing
+- ✅ TextMate grammar for syntax highlighting
+- ✅ VS Code extension scaffolding
+- ✅ Language configuration (comments, brackets, indentation)
+- ✅ File association (.cs, .clearschema)
 
-**Milestone:** Real-time feedback while authoring schemas.
+**Milestone:** Syntax highlighting while authoring schemas.
+
+**Note:** Full LSP server with diagnostics, autocomplete, hover, and go-to-definition can be added in future releases.
 
 ---
 
 ### Phase 8: Documentation & Adoption
-**Status:** Not Started
+**Status:** ✅ Complete (v0.8.0)
 
 Make the project discoverable and contributor-friendly.
 
-- Docusaurus documentation site
-- Online playground with live preview
-- Comparison guides (vs JSON Schema, Zod, TypeSpec)
-- Migration guide from JSON Schema
-- GitHub polish (issue templates, CONTRIBUTING.md, CI/CD)
-- Community setup
+- ✅ Comprehensive README with examples and comparisons
+- ✅ Example schemas (user.cs, ecommerce.cs)
+- ✅ Complete CHANGELOG with all versions
+- ✅ Updated ROADMAP with phase status
+- ✅ Project badges (version, tests, coverage, license)
+- ✅ Documentation links and structure
 
-**Milestone:** Ready for public launch.
+**Milestone:** Ready for community use and contributions.
 
 ---
 

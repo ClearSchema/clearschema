@@ -1,0 +1,186 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "ClearSchema",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#directives"
+    },
+    {
+      "include": "#defs"
+    },
+    {
+      "include": "#imports"
+    },
+    {
+      "include": "#field-line"
+    },
+    {
+      "include": "#modifier-line"
+    },
+    {
+      "include": "#array-item"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.number-sign.clearschema",
+          "match": "#.*$"
+        }
+      ]
+    },
+    "directives": {
+      "patterns": [
+        {
+          "name": "keyword.control.directive.clearschema",
+          "match": "^\\s*@(namespace|version|targets)\\b"
+        }
+      ]
+    },
+    "defs": {
+      "patterns": [
+        {
+          "name": "keyword.control.defs.clearschema",
+          "match": "^\\s*\\$defs:"
+        }
+      ]
+    },
+    "imports": {
+      "patterns": [
+        {
+          "name": "keyword.control.import.clearschema",
+          "match": "^\\s*import:"
+        }
+      ]
+    },
+    "field-line": {
+      "patterns": [
+        {
+          "name": "meta.field.clearschema",
+          "match": "^\\s*([\\w-]+)\\s*:\\s*([\\w\\|.]+)\\s*(?::\\s*(.*))?$",
+          "captures": {
+            "1": {
+              "name": "variable.other.field-name.clearschema"
+            },
+            "2": {
+              "patterns": [
+                {
+                  "include": "#types"
+                }
+              ]
+            },
+            "3": {
+              "name": "string.unquoted.description.clearschema"
+            }
+          }
+        }
+      ]
+    },
+    "modifier-line": {
+      "patterns": [
+        {
+          "name": "meta.modifier.clearschema",
+          "match": "^\\s*\\^\\s*([\\w.]+)\\s*:\\s*(.*)$",
+          "captures": {
+            "1": {
+              "name": "entity.name.tag.modifier.clearschema"
+            },
+            "2": {
+              "patterns": [
+                {
+                  "include": "#values"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "array-item": {
+      "patterns": [
+        {
+          "name": "meta.array-item.clearschema",
+          "match": "^\\s*-\\s+(.*)$",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "#types"
+                },
+                {
+                  "include": "#values"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "storage.type.primitive.clearschema",
+          "match": "\\b(string|number|integer|boolean|null|object|array)\\b"
+        },
+        {
+          "name": "storage.type.reference.clearschema",
+          "match": "\\$ref"
+        },
+        {
+          "name": "storage.type.composition.clearschema",
+          "match": "\\b(allOf|anyOf|oneOf)\\b"
+        },
+        {
+          "name": "storage.modifier.clearschema",
+          "match": "\\.(required|nullable|tuple)\\b"
+        },
+        {
+          "name": "keyword.operator.union.clearschema",
+          "match": "\\|"
+        }
+      ]
+    },
+    "values": {
+      "patterns": [
+        {
+          "name": "constant.numeric.clearschema",
+          "match": "\\b\\d+(\\.\\d+)?\\b"
+        },
+        {
+          "name": "constant.language.boolean.clearschema",
+          "match": "\\b(true|false)\\b"
+        },
+        {
+          "name": "constant.language.null.clearschema",
+          "match": "\\bnull\\b"
+        },
+        {
+          "name": "string.quoted.double.clearschema",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.clearschema",
+              "match": "\\\\."
+            }
+          ]
+        },
+        {
+          "name": "meta.structure.array.clearschema",
+          "begin": "\\[",
+          "end": "\\]",
+          "patterns": [
+            {
+              "include": "#values"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "scopeName": "source.clearschema"
+}
