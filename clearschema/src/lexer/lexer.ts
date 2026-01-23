@@ -9,6 +9,8 @@ export enum TokenType {
     NAMESPACE = 'NAMESPACE',
     VERSION = 'VERSION',
     TARGETS = 'TARGETS',
+    IMPORT = 'IMPORT',
+    DEFS = 'DEFS',
     INDENT = 'INDENT',
     DEDENT = 'DEDENT',
     EOF = 'EOF',
@@ -65,6 +67,14 @@ function detectLineType(line: string): TokenType | null {
 
     if (trimmed.startsWith('@targets')) {
         return TokenType.TARGETS;
+    }
+
+    if (trimmed === '$defs:') {
+        return TokenType.DEFS;
+    }
+
+    if (trimmed.startsWith('import:')) {
+        return TokenType.IMPORT;
     }
 
     if (trimmed.startsWith('define ')) {

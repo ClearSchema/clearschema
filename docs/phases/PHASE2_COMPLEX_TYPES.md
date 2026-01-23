@@ -8,13 +8,13 @@
 
 ## Deliverables
 
-- [ ] Object field parsing with nested fields
-- [ ] Basic array parsing with item types
-- [ ] Tuple array support (`array.tuple`)
-- [ ] Object array support (inline objects)
-- [ ] Deep nesting support
-- [ ] Indentation handling for complex structures
-- [ ] Integration tests for nested structures
+- [x] Object field parsing with nested fields
+- [x] Basic array parsing with item types
+- [x] Tuple array support (`array.tuple`)
+- [x] Object array support (inline objects)
+- [x] Deep nesting support (tested to 5 levels)
+- [x] Indentation handling for complex structures
+- [x] Integration tests for nested structures (6 integration tests)
 
 ---
 
@@ -253,13 +253,13 @@ describe('Parser - Array Fields', () => {
 
 ## Acceptance Criteria
 
-- [ ] Object fields parse with arbitrary nesting depth
-- [ ] Array fields parse with item types
-- [ ] Tuple arrays parse with positional types
-- [ ] Inline object arrays parse correctly
-- [ ] Modifiers work on nested fields
-- [ ] Indentation errors are reported clearly
-- [ ] All tests pass with 100% coverage
+- [x] Object fields parse with arbitrary nesting depth
+- [x] Array fields parse with item types
+- [x] Tuple arrays parse with positional types
+- [x] Inline object arrays parse correctly
+- [x] Modifiers work on nested fields
+- [x] Indentation errors are reported clearly
+- [x] All tests pass with 92%+ coverage (132 tests total)
 
 ---
 

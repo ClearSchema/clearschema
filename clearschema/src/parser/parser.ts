@@ -5,8 +5,17 @@ import {
     NumberField,
     BooleanField,
     NullField,
+    ObjectField,
+    ArrayField,
+    TupleArrayField,
+    UnionField,
+    RefField,
+    CompositionField,
+    SchemaDefinition,
+    ImportDeclaration,
     FieldTypeName,
     PrimitiveType,
+    CompositionType,
     Modifier,
     ModifierValue,
     SourceLocation,
@@ -15,6 +24,9 @@ import { ParseError, loc } from './errors';
 import { tokenize, TokenStream, TokenType } from '../lexer/lexer';
 
 const PRIMITIVE_TYPES: PrimitiveType[] = ['string', 'number', 'integer', 'boolean', 'null'];
+const COMPLEX_TYPES: string[] = ['object', 'array', 'array.tuple'];
+const COMPOSITION_TYPES: CompositionType[] = ['allOf', 'anyOf', 'oneOf'];
+const ALL_TYPES: string[] = [...PRIMITIVE_TYPES, ...COMPLEX_TYPES, ...COMPOSITION_TYPES, '$ref'];
 
 interface ParsedTypeString {
     type: FieldTypeName;
@@ -35,6 +47,12 @@ interface ParsedModifier {
     location: SourceLocation;
 }
 
+interface ArrayItemInfo {
+    itemType: Field | FieldTypeName;
+    description: string;
+    location: SourceLocation;
+}
+
 class Parser {
     private stream: TokenStream;
     private source: string;
@@ -50,6 +68,8 @@ class Parser {
     parseSchema(): Schema {
         const startPos = this.stream.current().location.start;
         const fields: Field[] = [];
+        const definitions: SchemaDefinition[] = [];
+        const imports: ImportDeclaration[] = [];
         let namespace: string | undefined;
         let version: string | undefined;
         let targets: string[] | undefined;
@@ -62,6 +82,10 @@ class Parser {
                     version = this.parseVersion();
                 } else if (this.stream.match(TokenType.TARGETS)) {
                     targets = this.parseTargets();
+                } else if (this.stream.match(TokenType.IMPORT)) {
+                    imports.push(this.parseImport());
+                } else if (this.stream.match(TokenType.DEFS)) {
+                    definitions.push(...this.parseDefs());
                 } else if (this.stream.match(TokenType.FIELD_LINE)) {
                     fields.push(this.parseFieldWithModifiers());
                 } else if (this.stream.match(TokenType.INDENT, TokenType.DEDENT)) {
@@ -86,7 +110,8 @@ class Parser {
             namespace,
             version,
             targets,
-            definitions: [],
+            imports,
+            definitions,
             fields,
             errors: this.errors.length > 0 ? this.errors : undefined,
             location: loc(startPos, endPos),
@@ -135,35 +160,130 @@ class Parser {
         );
     }
 
-    parseFieldWithModifiers(): Field {
-        const fieldLine = this.parseFieldLine();
-        const modifiers: ParsedModifier[] = [];
+    private parseImport(): ImportDeclaration {
+        const token = this.stream.advance();
+        const match = token.value.match(/^import:\s+(.+)$/);
+        if (!match) {
+            throw new ParseError(
+                'Invalid import directive',
+                token.location,
+                this.source,
+                'Expected import: <file-path>'
+            );
+        }
 
-        // Check for INDENT to look for block modifiers
+        const path = match[1].trim();
+        const definitions: string[] = [];
+        const startPos = token.location.start;
+        let endPos = token.location.end;
+
+        // Parse import list (must be indented array items)
         if (this.stream.match(TokenType.INDENT)) {
             this.stream.advance();
 
-            // Collect modifier lines
-            while (this.stream.match(TokenType.MODIFIER_LINE)) {
+            while (!this.stream.match(TokenType.DEDENT) && !this.stream.isAtEnd()) {
+                if (this.stream.match(TokenType.ARRAY_ITEM)) {
+                    const itemToken = this.stream.advance();
+                    const content = itemToken.value.replace(/^-\s*/, '').trim();
+                    definitions.push(content);
+                    endPos = itemToken.location.end;
+                } else {
+                    this.stream.advance();
+                }
+            }
+
+            if (this.stream.match(TokenType.DEDENT)) {
+                this.stream.advance();
+            }
+        }
+
+        return {
+            path,
+            definitions,
+            resolved: false,
+            location: loc(startPos, endPos),
+        };
+    }
+
+    private parseDefs(): SchemaDefinition[] {
+        const token = this.stream.advance();
+        const definitions: SchemaDefinition[] = [];
+
+        // Must have indent after $defs:
+        if (!this.stream.match(TokenType.INDENT)) {
+            throw new ParseError(
+                'Expected indented definitions after $defs:',
+                token.location,
+                this.source,
+                'Definitions must be indented'
+            );
+        }
+
+        this.stream.advance();
+
+        // Parse each definition
+        while (!this.stream.match(TokenType.DEDENT) && !this.stream.isAtEnd()) {
+            if (this.stream.match(TokenType.FIELD_LINE)) {
+                const field = this.parseFieldWithModifiers();
+                definitions.push({
+                    name: field.name,
+                    field,
+                    location: field.location,
+                });
+            } else {
+                this.stream.advance();
+            }
+        }
+
+        if (this.stream.match(TokenType.DEDENT)) {
+            this.stream.advance();
+        }
+
+        return definitions;
+    }
+
+    parseFieldWithModifiers(): Field {
+        const fieldLine = this.parseFieldLine();
+        const modifiers: ParsedModifier[] = [];
+        const childFields: Field[] = [];
+        const arrayItems: ArrayItemInfo[] = [];
+
+        // Check for INDENT to look for block content (modifiers, children, array items)
+        if (this.stream.match(TokenType.INDENT)) {
+            this.stream.advance();
+
+            // Collect block content
+            while (!this.stream.match(TokenType.DEDENT) && !this.stream.isAtEnd()) {
                 try {
-                    modifiers.push(this.parseModifierLine());
+                    if (this.stream.match(TokenType.MODIFIER_LINE)) {
+                        modifiers.push(this.parseModifierLine());
+                    } else if (this.stream.match(TokenType.FIELD_LINE)) {
+                        // Child field (for objects)
+                        childFields.push(this.parseFieldWithModifiers());
+                    } else if (this.stream.match(TokenType.ARRAY_ITEM)) {
+                        // Array item (for arrays/tuples)
+                        arrayItems.push(this.parseArrayItem());
+                    } else {
+                        // Skip unexpected tokens
+                        this.stream.advance();
+                    }
                 } catch (error) {
                     if (error instanceof ParseError) {
                         this.errors.push(error);
-                        this.stream.advance(); // Skip bad modifier
+                        this.stream.advance(); // Skip bad token
                     } else {
                         throw error;
                     }
                 }
             }
 
-            // Expect DEDENT
+            // Consume DEDENT
             if (this.stream.match(TokenType.DEDENT)) {
                 this.stream.advance();
             }
         }
 
-        return this.buildField(fieldLine, modifiers);
+        return this.buildField(fieldLine, modifiers, childFields, arrayItems);
     }
 
     private parseFieldLine(): ParsedFieldLine {
@@ -210,10 +330,27 @@ class Parser {
     }
 
     private parseTypeString(typeString: string, location: SourceLocation): ParsedTypeString {
+        // Check for union type (contains |)
+        if (typeString.includes('|')) {
+            return this.parseUnionTypeString(typeString, location);
+        }
+
         const parts = typeString.split('.');
-        const typeName = parts[0];
+        let typeName = parts[0];
         let required = false;
         let nullable = false;
+        let startIndex = 1;
+
+        // Handle array.tuple as a compound type name
+        if (typeName === 'array' && parts.length > 1 && parts[1] === 'tuple') {
+            typeName = 'array.tuple';
+            startIndex = 2;
+        }
+
+        // Handle $ref
+        if (typeName === '$ref') {
+            typeName = 'ref';
+        }
 
         // Validate type name
         if (!this.isValidType(typeName)) {
@@ -221,12 +358,12 @@ class Parser {
                 `Unknown type: "${typeName}"`,
                 location,
                 this.source,
-                `Valid types are: ${PRIMITIVE_TYPES.join(', ')}`
+                `Valid types are: ${ALL_TYPES.join(', ')}`
             );
         }
 
         // Process inline modifiers
-        for (let i = 1; i < parts.length; i++) {
+        for (let i = startIndex; i < parts.length; i++) {
             const modifier = parts[i];
             if (modifier === 'required') {
                 required = true;
@@ -249,8 +386,38 @@ class Parser {
         };
     }
 
+    private parseUnionTypeString(typeString: string, location: SourceLocation): ParsedTypeString {
+        // Split by | but preserve modifiers after the union
+        // Format: type1|type2.required.nullable
+        let mainPart = typeString;
+        let required = false;
+        let nullable = false;
+
+        // Extract trailing modifiers
+        const lastDot = typeString.lastIndexOf('.');
+        if (lastDot !== -1) {
+            const afterDot = typeString.substring(lastDot + 1);
+            if (afterDot === 'required' || afterDot === 'nullable') {
+                const parts = typeString.split('.');
+                const modifiers = parts.slice(1);
+                mainPart = parts[0];
+
+                for (const mod of modifiers) {
+                    if (mod === 'required') required = true;
+                    else if (mod === 'nullable') nullable = true;
+                }
+            }
+        }
+
+        return {
+            type: 'union',
+            required,
+            nullable,
+        };
+    }
+
     private isValidType(typeName: string): boolean {
-        return PRIMITIVE_TYPES.includes(typeName as PrimitiveType);
+        return ALL_TYPES.includes(typeName) || typeName === 'ref' || typeName === 'union';
     }
 
     private parseModifierLine(): ParsedModifier {
@@ -276,6 +443,81 @@ class Parser {
             name,
             value,
             location: token.location,
+        };
+    }
+
+    private parseArrayItem(): ArrayItemInfo {
+        const token = this.stream.advance();
+        const content = token.value.replace(/^-\s*/, '').trim();
+        const location = token.location;
+
+        // Check for inline object: "- object:" or just "- object"
+        if (content === 'object:' || content === 'object') {
+            // Inline object - parse nested fields
+            const childFields: Field[] = [];
+
+            if (this.stream.match(TokenType.INDENT)) {
+                this.stream.advance();
+
+                while (!this.stream.match(TokenType.DEDENT) && !this.stream.isAtEnd()) {
+                    if (this.stream.match(TokenType.FIELD_LINE)) {
+                        childFields.push(this.parseFieldWithModifiers());
+                    } else {
+                        this.stream.advance();
+                    }
+                }
+
+                if (this.stream.match(TokenType.DEDENT)) {
+                    this.stream.advance();
+                }
+            }
+
+            const inlineObject: ObjectField = {
+                name: '',
+                type: 'object',
+                description: '',
+                required: false,
+                nullable: false,
+                rawModifiers: {},
+                modifiers: [],
+                fields: childFields,
+                location,
+            };
+
+            return {
+                itemType: inlineObject,
+                description: '',
+                location,
+            };
+        }
+
+        // Parse: "type: description" or just "type"
+        const colonIndex = content.indexOf(':');
+        let typeName: string;
+        let description: string;
+
+        if (colonIndex === -1) {
+            typeName = content;
+            description = '';
+        } else {
+            typeName = content.substring(0, colonIndex).trim();
+            description = content.substring(colonIndex + 1).trim();
+        }
+
+        // Validate type
+        if (!this.isValidType(typeName) && !PRIMITIVE_TYPES.includes(typeName as PrimitiveType)) {
+            throw new ParseError(
+                `Unknown array item type: "${typeName}"`,
+                location,
+                this.source,
+                `Valid types are: ${ALL_TYPES.join(', ')}`
+            );
+        }
+
+        return {
+            itemType: typeName as FieldTypeName,
+            description,
+            location,
         };
     }
 
@@ -356,7 +598,12 @@ class Parser {
         return items;
     }
 
-    private buildField(fieldLine: ParsedFieldLine, modifiers: ParsedModifier[]): Field {
+    private buildField(
+        fieldLine: ParsedFieldLine,
+        modifiers: ParsedModifier[],
+        childFields: Field[] = [],
+        arrayItems: ArrayItemInfo[] = []
+    ): Field {
         const { name, typeInfo, description, location } = fieldLine;
         const { type, required, nullable } = typeInfo;
 
@@ -403,12 +650,26 @@ class Parser {
                 return this.buildBooleanField(baseProps);
             case 'null':
                 return this.buildNullField(baseProps);
+            case 'object':
+                return this.buildObjectField(baseProps, rawModifiers, childFields);
+            case 'array':
+                return this.buildArrayField(baseProps, rawModifiers, arrayItems);
+            case 'array.tuple':
+                return this.buildTupleArrayField(baseProps, rawModifiers, arrayItems);
+            case 'union':
+                return this.buildUnionField(baseProps, fieldLine);
+            case 'ref':
+                return this.buildRefField(baseProps, description);
+            case 'allOf':
+            case 'anyOf':
+            case 'oneOf':
+                return this.buildCompositionField(baseProps, type as CompositionType, arrayItems);
             default:
                 throw new ParseError(
                     `Unsupported type: ${type}`,
                     location,
                     this.source,
-                    'Phase 1 only supports primitive types'
+                    `Valid types are: ${ALL_TYPES.join(', ')}`
                 );
         }
     }
@@ -458,6 +719,148 @@ class Parser {
         return {
             ...baseProps,
             type: 'null',
+        };
+    }
+
+    private buildObjectField(
+        baseProps: Omit<ObjectField, 'type' | 'fields'>,
+        rawModifiers: Record<string, any>,
+        childFields: Field[]
+    ): ObjectField {
+        return {
+            ...baseProps,
+            type: 'object',
+            fields: childFields,
+        };
+    }
+
+    private buildArrayField(
+        baseProps: Omit<ArrayField, 'type' | 'itemType' | 'minItems' | 'maxItems' | 'uniqueItems'>,
+        rawModifiers: Record<string, any>,
+        arrayItems: ArrayItemInfo[]
+    ): ArrayField {
+        // Determine item type from array items
+        let itemType: Field | FieldTypeName = 'string'; // Default
+
+        if (arrayItems.length > 0) {
+            itemType = arrayItems[0].itemType;
+        }
+
+        return {
+            ...baseProps,
+            type: 'array',
+            itemType,
+            minItems: rawModifiers['minItems'] as number | undefined,
+            maxItems: rawModifiers['maxItems'] as number | undefined,
+            uniqueItems: rawModifiers['uniqueItems'] as boolean | undefined,
+        };
+    }
+
+    private buildTupleArrayField(
+        baseProps: Omit<TupleArrayField, 'type' | 'items'>,
+        rawModifiers: Record<string, any>,
+        arrayItems: ArrayItemInfo[]
+    ): TupleArrayField {
+        // Convert array items to tuple items (positional fields)
+        const items: Field[] = arrayItems.map((item, index) => {
+            if (typeof item.itemType === 'string') {
+                // Simple type - create a minimal field
+                return {
+                    name: `item${index}`,
+                    type: item.itemType as FieldTypeName,
+                    description: item.description,
+                    required: false,
+                    nullable: false,
+                    rawModifiers: {},
+                    modifiers: [],
+                    location: item.location,
+                } as Field;
+            } else {
+                // Already a Field
+                return item.itemType;
+            }
+        });
+
+        return {
+            ...baseProps,
+            type: 'array.tuple',
+            items,
+        };
+    }
+
+    private buildUnionField(
+        baseProps: Omit<UnionField, 'type' | 'types'>,
+        fieldLine: ParsedFieldLine
+    ): UnionField {
+        // Extract union types from the original type string
+        const typeString = fieldLine.typeInfo.type as string;
+
+        // Parse union from field line
+        // Format: type1|type2 or type1|type2.required.nullable
+        const colonIndex = this.source.indexOf(':', fieldLine.location.start.offset);
+        const secondColonIndex = this.source.indexOf(':', colonIndex + 1);
+
+        let typeStr = '';
+        if (secondColonIndex > colonIndex) {
+            typeStr = this.source.substring(colonIndex + 1, secondColonIndex).trim();
+        }
+
+        // Remove trailing modifiers
+        typeStr = typeStr.replace(/\.(required|nullable)+$/, '');
+
+        const types = typeStr.split('|').map(t => t.trim()) as FieldTypeName[];
+
+        return {
+            ...baseProps,
+            type: 'union',
+            types,
+        };
+    }
+
+    private buildRefField(
+        baseProps: Omit<RefField, 'type' | 'ref'>,
+        description: string
+    ): RefField {
+        // Description contains the reference path
+        // Format: $ref: #/$defs/TypeName or $ref: TypeName
+        const ref = description.trim();
+
+        return {
+            ...baseProps,
+            type: 'ref',
+            ref,
+        };
+    }
+
+    private buildCompositionField(
+        baseProps: Omit<CompositionField, 'type' | 'schemas'>,
+        type: CompositionType,
+        arrayItems: ArrayItemInfo[]
+    ): CompositionField {
+        // Composition types have array items that are either refs or inline schemas
+        const schemas: (Field | RefField)[] = arrayItems.map((item) => {
+            if (typeof item.itemType === 'string') {
+                // Should be a ref
+                return {
+                    name: '',
+                    type: 'ref' as const,
+                    ref: item.itemType,
+                    description: item.description,
+                    required: false,
+                    nullable: false,
+                    rawModifiers: {},
+                    modifiers: [],
+                    location: item.location,
+                } as RefField;
+            } else {
+                return item.itemType;
+            }
+        });
+
+        return {
+            ...baseProps,
+            type,
+            schemas,
         };
     }
 

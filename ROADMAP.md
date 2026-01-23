@@ -22,7 +22,7 @@ A high-level overview of the development phases for ClearSchema.
 ## Phase Details
 
 ### Phase 1: Core Parser Foundation
-**Status:** Not Started
+**Status:** ✅ Complete (v0.1.0)
 
 Build the foundational lexer and parser for primitive types with modifiers.
 
@@ -38,7 +38,7 @@ Build the foundational lexer and parser for primitive types with modifiers.
 ---
 
 ### Phase 2: Complex Types
-**Status:** Not Started
+**Status:** ✅ Complete (v0.2.0)
 
 Extend parser to handle nested structures.
 
@@ -53,7 +53,7 @@ Extend parser to handle nested structures.
 ---
 
 ### Phase 3: References & Advanced Types
-**Status:** Not Started
+**Status:** ✅ Complete (v0.3.0)
 
 Add schema reuse and composition features.
 
@@ -69,7 +69,7 @@ Add schema reuse and composition features.
 ---
 
 ### Phase 4: JSON Schema Export
-**Status:** Not Started
+**Status:** ✅ Complete (v0.4.0)
 
 First working export target.
 
@@ -84,7 +84,7 @@ First working export target.
 ---
 
 ### Phase 5: Additional Exporters
-**Status:** Not Started
+**Status:** 🔄 In Progress (v0.5.0 - TypeScript complete)
 
 Multi-target code generation.
 

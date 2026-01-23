@@ -10,12 +10,25 @@ export { ParseError, pos, loc } from './parser/errors';
 export { tokenize, TokenStream, TokenType } from './lexer/lexer';
 export type { Token, LexerResult } from './lexer/lexer';
 
+// Exporters
+export { exportJsonSchema, JsonSchemaExporter } from './exporters/json-schema';
+export { exportTypeScript, TypeScriptExporter } from './exporters/typescript';
+export type {
+    Exporter,
+    ExportOptions,
+    JsonSchema,
+    JsonSchemaField,
+    JsonSchemaExportOptions,
+    TypeScriptExportOptions,
+} from './exporters/types';
+
 // AST types
 export type {
     // Core types
     Schema,
     Field,
     SchemaDefinition,
+    ImportDeclaration,
 
     // Field types
     StringField,
@@ -27,10 +40,12 @@ export type {
     TupleArrayField,
     UnionField,
     RefField,
+    CompositionField,
 
     // Type names
     PrimitiveType,
     ComplexType,
+    CompositionType,
     FieldTypeName,
 
     // Modifiers
