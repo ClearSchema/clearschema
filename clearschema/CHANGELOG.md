@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-01-21
+
+### Added
+
+- Command-line interface (Phase 6 - Complete)
+  - CLI tool for parsing and exporting ClearSchema files
+  - Support for JSON Schema and TypeScript export formats
+  - Options for output file, format selection, and schema version
+  - Parse error reporting with clear error messages
+  - Help and version commands
+  - Executable bin entry: `clearschema`
+- Package metadata
+  - Updated package.json with proper description, keywords, and license
+  - Added bin entry for CLI executable
+  - Updated main entry point to dist/index.js
+
 ## [0.5.0] - 2026-01-21
 
 ### Added

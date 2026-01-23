@@ -98,7 +98,7 @@ Multi-target code generation.
 ---
 
 ### Phase 6: CLI & Tooling
-**Status:** Not Started
+**Status:** ✅ Complete (v0.6.0)
 
 Developer experience polish.
 
