@@ -1,6 +1,6 @@
 {
   "name": "clearschema",
-  "version": "1.0.0",
+  "version": "0.2.0",
   "description": "A human-friendly schema language that compiles to JSON Schema, TypeScript, and more",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
