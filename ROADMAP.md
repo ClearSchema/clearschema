@@ -53,7 +53,7 @@ Extend parser to handle nested structures.
 ---
 
 ### Phase 3: References & Advanced Types
-**Status:** ✅ Complete (v0.3.0)
+**Status:** ✅ Complete (v0.2.0)
 
 Add schema reuse and composition features.
 
@@ -69,7 +69,7 @@ Add schema reuse and composition features.
 ---
 
 ### Phase 4: JSON Schema Export
-**Status:** ✅ Complete (v0.4.0)
+**Status:** ✅ Complete (v0.2.0)
 
 First working export target.
 
@@ -84,7 +84,7 @@ First working export target.
 ---
 
 ### Phase 5: Additional Exporters
-**Status:** ✅ Complete (v1.0.0)
+**Status:** ✅ Complete (v0.2.0)
 
 Multi-target code generation.
 
@@ -98,7 +98,7 @@ Multi-target code generation.
 ---
 
 ### Phase 6: CLI & Tooling
-**Status:** ✅ Complete (v0.6.0)
+**Status:** ✅ Complete (v0.2.0)
 
 Developer experience polish.
 
@@ -113,7 +113,7 @@ Developer experience polish.
 ---
 
 ### Phase 7: VS Code Extension & LSP
-**Status:** ✅ Complete (v0.7.0)
+**Status:** ✅ Complete (v0.2.0)
 
 First-class editor support.
 
@@ -129,7 +129,7 @@ First-class editor support.
 ---
 
 ### Phase 8: Documentation & Adoption
-**Status:** ✅ Complete (v0.8.0)
+**Status:** ✅ Complete (v0.2.0)
 
 Make the project discoverable and contributor-friendly.
 
@@ -139,6 +139,7 @@ Make the project discoverable and contributor-friendly.
 - ✅ Updated ROADMAP with phase status
 - ✅ Project badges (version, tests, coverage, license)
 - ✅ Documentation links and structure
+- ✅ MIT License file
 
 **Milestone:** Ready for community use and contributions.
 
