@@ -7,6 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,7 +20,7 @@ jobs:
         working-directory: clearschema
       - run: npm test
         working-directory: clearschema
-      - run: npm publish --access public
+      - run: npm publish --access public --provenance
         working-directory: clearschema
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
