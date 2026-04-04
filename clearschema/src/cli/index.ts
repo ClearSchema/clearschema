@@ -4,7 +4,6 @@
 const pkg = require('../../package.json');
 
 import * as fs from 'fs';
-import * as path from 'path';
 import { parse } from '../parser/parser';
 import { exportJsonSchema } from '../exporters/json-schema';
 import { exportTypeScript } from '../exporters/typescript';
@@ -157,12 +156,17 @@ function main(): void {
         });
         output = JSON.stringify(openapi, null, 2);
     } else if (format === 'llm-schema') {
-        const result = exportLlmSchema(schema);
-        output = JSON.stringify(result.schema, null, 2);
-        if (result.warnings.length > 0) {
-            for (const warning of result.warnings) {
-                console.error(`Warning: ${warning}`);
+        try {
+            const result = exportLlmSchema(schema);
+            output = JSON.stringify(result.schema, null, 2);
+            if (result.warnings.length > 0) {
+                for (const warning of result.warnings) {
+                    console.error(`Warning: ${warning}`);
+                }
             }
+        } catch (err) {
+            console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+            process.exit(1);
         }
     } else {
         console.error(`Error: Unknown format "${format}"`);

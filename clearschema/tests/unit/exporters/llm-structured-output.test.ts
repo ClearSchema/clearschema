@@ -183,4 +183,34 @@ user: $ref: #/$defs/User`);
             );
         });
     });
+
+    describe('property count validation', () => {
+        it('warns when total property count exceeds maxProperties limit', () => {
+            // Build a schema with many properties using a lower limit
+            const schema = parse(`a: string: A
+b: string: B
+c: string: C
+d: string: D
+e: string: E`);
+            const result = exportLlmSchema(schema, { maxProperties: 3 });
+
+            const propWarnings = result.warnings.filter((w) =>
+                w.includes('property count')
+            );
+            expect(propWarnings).toHaveLength(1);
+            expect(propWarnings[0]).toContain('5');
+            expect(propWarnings[0]).toContain('3');
+        });
+
+        it('does not warn when property count is within limit', () => {
+            const schema = parse(`a: string: A
+b: string: B`);
+            const result = exportLlmSchema(schema, { maxProperties: 10 });
+
+            const propWarnings = result.warnings.filter((w) =>
+                w.includes('property count')
+            );
+            expect(propWarnings).toHaveLength(0);
+        });
+    });
 });
