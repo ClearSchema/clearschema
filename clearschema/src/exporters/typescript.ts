@@ -1,8 +1,6 @@
 import {
     Schema,
     Field,
-    StringField,
-    NumberField,
     ObjectField,
     ArrayField,
     TupleArrayField,
@@ -168,7 +166,7 @@ export class TypeScriptExporter implements Exporter<string> {
         return `[${itemTypes.join(', ')}]`;
     }
 
-    private exportUnionType(field: UnionField, options?: TypeScriptExportOptions): string {
+    private exportUnionType(field: UnionField, _options?: TypeScriptExportOptions): string {
         const types = field.types.map(t => this.mapPrimitiveType(t as string));
         return types.join(' | ');
     }

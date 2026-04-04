@@ -187,7 +187,7 @@ export class PydanticExporter implements Exporter<string> {
         return 'int';
     }
 
-    private exportObjectType(field: ObjectField): string {
+    private exportObjectType(_field: ObjectField): string {
         // Inline object type - would need nested class
         return 'dict';
     }
@@ -211,7 +211,7 @@ export class PydanticExporter implements Exporter<string> {
         return `Tuple[${itemTypes.join(', ')}]`;
     }
 
-    private exportUnionType(field: UnionField, useTyping: boolean): string {
+    private exportUnionType(field: UnionField, _useTyping: boolean): string {
         this.imports.add('from typing import Union');
         const types = field.types.map(t => this.mapPrimitiveType(t as string));
         return `Union[${types.join(', ')}]`;

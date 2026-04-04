@@ -1,5 +1,5 @@
 import { parse } from '../../src';
-import { Schema, ObjectField, ArrayField, StringField, NumberField, TupleArrayField } from '../../src/ast/types';
+import { ObjectField, ArrayField, StringField, NumberField, TupleArrayField } from '../../src/ast/types';
 
 describe('Integration Tests - Complex Schemas', () => {
     describe('User Profile Schema', () => {

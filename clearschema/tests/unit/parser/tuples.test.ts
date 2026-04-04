@@ -1,5 +1,5 @@
 import { parse, parseField } from '../../../src';
-import { TupleArrayField, Field } from '../../../src/ast/types';
+import { TupleArrayField } from '../../../src/ast/types';
 
 describe('Parser - Tuple Array Fields', () => {
     describe('basic tuple parsing', () => {

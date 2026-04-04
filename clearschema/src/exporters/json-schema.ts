@@ -15,8 +15,6 @@ import { Exporter, JsonSchema, JsonSchemaField, JsonSchemaExportOptions } from '
 export class JsonSchemaExporter implements Exporter<JsonSchema> {
     export(schema: Schema, options?: JsonSchemaExportOptions): JsonSchema {
         const schemaVersion = options?.schemaVersion ?? '2020-12';
-        const includeDescriptions = options?.includeDescriptions ?? true;
-        const includeDefaults = options?.includeDefaults ?? true;
 
         const result: JsonSchema = {
             $schema: this.getSchemaUri(schemaVersion),
@@ -67,9 +65,6 @@ export class JsonSchemaExporter implements Exporter<JsonSchema> {
     }
 
     private exportField(field: Field, options?: JsonSchemaExportOptions): JsonSchemaField {
-        const includeDescriptions = options?.includeDescriptions ?? true;
-        const includeDefaults = options?.includeDefaults ?? true;
-
         // Handle nullable
         if (field.nullable) {
             return this.exportNullable(field, options);
@@ -282,7 +277,7 @@ export class JsonSchemaExporter implements Exporter<JsonSchema> {
         return result;
     }
 
-    private exportRef(field: RefField, options?: JsonSchemaExportOptions): JsonSchemaField {
+    private exportRef(field: RefField, _options?: JsonSchemaExportOptions): JsonSchemaField {
         const result: JsonSchemaField = {
             $ref: field.ref,
         };
