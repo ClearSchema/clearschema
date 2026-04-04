@@ -1,9 +1,10 @@
 {
-  "name": "clearschema",
-  "version": "0.2.0",
+  "name": "@clearschema/core",
+  "version": "0.3.0",
   "description": "A human-friendly schema language that compiles to JSON Schema, TypeScript, and more",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": ["dist/", "README.md", "LICENSE"],
   "bin": {
     "clearschema": "dist/cli/index.js"
   },
@@ -12,10 +13,16 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "lint": "eslint src tests --ext .ts"
+    "lint": "eslint src tests",
+    "prepack": "cp ../README.md ../LICENSE .",
+    "postpack": "rm -f README.md LICENSE",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "keywords": ["schema", "json-schema", "typescript", "validation", "codegen"],
-  "author": "",
+  "author": "Darin Chambers",
   "license": "MIT",
   "devDependencies": {
     "@eslint/js": "^9.39.2",

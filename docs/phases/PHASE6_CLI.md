@@ -46,25 +46,25 @@ Options:
 
 ```bash
 # Parse and see AST
-clearschema parse schema.cs --json
+clearschema parse schema.clear --json
 
 # Export to JSON Schema
-clearschema export schema.cs -t json-schema -o schema.json
+clearschema export schema.clear -t json-schema -o schema.json
 
 # Export to TypeScript
-clearschema export schema.cs -t typescript -o types.ts
+clearschema export schema.clear -t typescript -o types.ts
 
 # Export to Pydantic
-clearschema export schema.cs -t pydantic -o models.py
+clearschema export schema.clear -t pydantic -o models.py
 
 # Validate schema
-clearschema validate schema.cs
+clearschema validate schema.clear
 
 # Watch mode
-clearschema export schema.cs -t json-schema -o schema.json --watch
+clearschema export schema.clear -t json-schema -o schema.json --watch
 
 # Lint for issues
-clearschema lint schema.cs
+clearschema lint schema.clear
 ```
 
 ---
@@ -279,28 +279,28 @@ npm publish
 ```typescript
 describe('CLI', () => {
   it('exports to JSON Schema', async () => {
-    const result = await exec('clearschema export fixtures/user.cs -t json-schema');
+    const result = await exec('clearschema export fixtures/user.clear -t json-schema');
 
     expect(result.exitCode).toBe(0);
     expect(JSON.parse(result.stdout)).toHaveProperty('$schema');
   });
 
   it('validates valid schema', async () => {
-    const result = await exec('clearschema validate fixtures/valid.cs');
+    const result = await exec('clearschema validate fixtures/valid.clear');
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain('valid');
   });
 
   it('reports validation errors', async () => {
-    const result = await exec('clearschema validate fixtures/invalid.cs');
+    const result = await exec('clearschema validate fixtures/invalid.clear');
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain('error');
   });
 
   it('outputs to file with -o', async () => {
-    await exec('clearschema export fixtures/user.cs -o output.json');
+    await exec('clearschema export fixtures/user.clear -o output.json');
 
     const output = await fs.readFile('output.json', 'utf-8');
     expect(JSON.parse(output)).toHaveProperty('$schema');

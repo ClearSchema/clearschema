@@ -1,5 +1,5 @@
 import { parse, parseField } from '../../../src';
-import { ArrayField, ObjectField, StringField } from '../../../src/ast/types';
+import { ArrayField, ObjectField } from '../../../src/ast/types';
 
 describe('Parser - Array Fields', () => {
     describe('basic array parsing', () => {

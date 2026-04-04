@@ -359,7 +359,7 @@ function fieldToSymbol(field: Field): DocumentSymbol {
     "languages": [{
       "id": "clearschema",
       "aliases": ["ClearSchema", "clearschema"],
-      "extensions": [".cs"],
+      "extensions": [".clear"],
       "configuration": "./language-configuration.json"
     }],
     "grammars": [{

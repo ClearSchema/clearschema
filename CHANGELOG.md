@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-04-04
+
+### Added
+
+- **LLM Structured Output Exporter**
+  - New `-f llm-schema` export format for OpenAI, Anthropic, and Google structured output APIs
+  - Produces strict JSON Schema subset: `additionalProperties: false`, all properties required, no `$ref` (inlined), no `$defs`
+  - Strips unsupported keywords (`default`, `examples`, `const`, numeric/string constraints, `format`) with warnings
+  - Validates nesting depth (max 5 levels) and total property count (max 100)
+  - Circular reference detection with clear error messages
+  - Available via CLI (`-f llm-schema`) and programmatically (`exportLlmSchema()`)
+
+- **LLM-focused examples**
+  - `examples/llm-tool-definition.clear` — function tool definition schema
+  - `examples/llm-structured-response.clear` — structured response schema
+  - `examples/llm-agent-output.clear` — multi-step agent output schema
+
+- **GitHub Actions CI/CD**
+  - CI workflow: lint, build, test on Node 20.x and 22.x for every push and PR
+  - Release workflow: automated npm publish on version tags
+
+- **Use Cases section in README** with equal positioning for API schemas, TypeScript types, Pydantic models, and LLM structured output
+
+### Changed
+
+- **Package renamed** from `clearschema` to `@clearschema/core`
+- **File extension renamed** from `.cs` to `.clear` (`.cs` support dropped entirely to avoid C# collision)
+- CLI version now reads from package.json instead of hardcoded value
+- Fixed lint script for ESLint 9+ compatibility (removed `--ext .ts` flag)
+- Added `files` field, `engines`, `prepack`, and `prepublishOnly` to package.json
+- Added root `.gitignore`
+
+### Test Coverage
+
+- 242 tests passing across 17 test suites
+- 93%+ code coverage
+
 ## [0.2.0] - 2026-01-23
 
 ### Added
@@ -70,7 +107,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **VS Code Extension** (Phase 7)
   - TextMate grammar for syntax highlighting
-  - File associations (.cs, .clearschema)
+  - File associations (.clear)
   - Language configuration (comments, brackets, indentation)
   - Syntax highlighting for directives, $defs, imports, modifiers
 
@@ -108,5 +145,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Error recovery with resilient parsing
 - Comprehensive test suite (83 tests, 92%+ coverage)
 
+[0.3.0]: https://github.com/clearschema/clearschema/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/clearschema/clearschema/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/clearschema/clearschema/releases/tag/v0.1.0

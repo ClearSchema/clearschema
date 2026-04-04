@@ -1,0 +1,18 @@
+# Weather API Tool Definition
+# Demonstrates a function tool schema for LLM tool calling
+
+get_weather: object.required: Get current weather for a location
+  location: string.required: City name or coordinates
+    ^ minLength: 1
+
+  units: string: Temperature units
+    ^ enum: [celsius, fahrenheit]
+    ^ default: celsius
+
+  include_forecast: boolean: Include 5-day forecast
+    ^ default: false
+
+  forecast_days: integer: Number of forecast days
+    ^ min: 1
+    ^ max: 5
+    ^ default: 3

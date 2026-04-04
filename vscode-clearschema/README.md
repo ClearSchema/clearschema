@@ -12,8 +12,7 @@ Syntax highlighting for ClearSchema - a human-friendly schema language that comp
 ## File Extensions
 
 This extension activates for files with the following extensions:
-- `.cs`
-- `.clearschema`
+- `.clear`
 
 ## Example
 

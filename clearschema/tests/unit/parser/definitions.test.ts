@@ -1,5 +1,4 @@
 import { parse } from '../../../src/parser/parser';
-import { Schema, SchemaDefinition } from '../../../src/ast/types';
 
 describe('Parser - $defs', () => {
     it('parses $defs section', () => {

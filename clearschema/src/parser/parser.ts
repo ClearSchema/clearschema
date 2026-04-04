@@ -386,10 +386,9 @@ class Parser {
         };
     }
 
-    private parseUnionTypeString(typeString: string, location: SourceLocation): ParsedTypeString {
+    private parseUnionTypeString(typeString: string, _location: SourceLocation): ParsedTypeString {
         // Split by | but preserve modifiers after the union
         // Format: type1|type2.required.nullable
-        let mainPart = typeString;
         let required = false;
         let nullable = false;
 
@@ -400,7 +399,6 @@ class Parser {
             if (afterDot === 'required' || afterDot === 'nullable') {
                 const parts = typeString.split('.');
                 const modifiers = parts.slice(1);
-                mainPart = parts[0];
 
                 for (const mod of modifiers) {
                     if (mod === 'required') required = true;
@@ -793,7 +791,7 @@ class Parser {
         fieldLine: ParsedFieldLine
     ): UnionField {
         // Extract union types from the original type string
-        const typeString = fieldLine.typeInfo.type as string;
+        // typeString available via fieldLine.typeInfo.type if needed
 
         // Parse union from field line
         // Format: type1|type2 or type1|type2.required.nullable

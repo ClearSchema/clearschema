@@ -19,8 +19,7 @@
           "clearschema"
         ],
         "extensions": [
-          ".cs",
-          ".clearschema"
+          ".clear"
         ],
         "configuration": "./language-configuration.json"
       }

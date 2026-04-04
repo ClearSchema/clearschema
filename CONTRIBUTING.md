@@ -25,7 +25,7 @@ npm run test:coverage
 npm run build
 
 # Run the CLI locally
-node dist/cli/index.js ../examples/user.cs
+node dist/cli/index.js ../examples/user.clear
 ```
 
 ## Project Structure

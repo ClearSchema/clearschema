@@ -51,12 +51,12 @@ contacts: array: Contact list
 
 ```yaml
 # Import specific definitions
-import: ./common/types.cs
+import: ./common/types.clear
   - User
   - Address
 
 # Import all definitions
-import: ./common/types.cs
+import: ./common/types.clear
   - *
 
 # Usage after import
@@ -105,7 +105,7 @@ export interface Schema extends ASTNode {
 }
 
 export interface ImportDeclaration extends ASTNode {
-  path: string;           // e.g., "./common/types.cs"
+  path: string;           // e.g., "./common/types.clear"
   definitions: string[];  // e.g., ["User", "Address"] or ["*"]
   resolved?: boolean;     // Set after resolution pass
 }
@@ -213,24 +213,24 @@ user: $ref: #/$defs/User`;
 ```typescript
 describe('External Imports', () => {
   it('parses import declaration', () => {
-    const input = `import: ./common/types.cs
+    const input = `import: ./common/types.clear
   - User
   - Address`;
 
     const schema = parse(input);
 
     expect(schema.imports).toHaveLength(1);
-    expect(schema.imports[0].path).toBe('./common/types.cs');
+    expect(schema.imports[0].path).toBe('./common/types.clear');
     expect(schema.imports[0].definitions).toEqual(['User', 'Address']);
   });
 
   it('detects circular imports', async () => {
     const loader = mockFileLoader({
-      'a.cs': `import: ./b.cs\n  - *`,
-      'b.cs': `import: ./a.cs\n  - *`
+      'a.clear': `import: ./b.clear\n  - *`,
+      'b.clear': `import: ./a.clear\n  - *`
     });
 
-    await expect(parseWithImports('a.cs', { fileLoader: loader }))
+    await expect(parseWithImports('a.clear', { fileLoader: loader }))
       .rejects.toThrow(/circular import/i);
   });
 });

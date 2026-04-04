@@ -15,6 +15,8 @@ export { exportJsonSchema, JsonSchemaExporter } from './exporters/json-schema';
 export { exportTypeScript, TypeScriptExporter } from './exporters/typescript';
 export { exportPydantic, PydanticExporter } from './exporters/pydantic';
 export { exportOpenAPI, OpenAPIExporter } from './exporters/openapi';
+export { exportLlmSchema, LlmSchemaExporter } from './exporters/llm-structured-output';
+export type { LlmSchemaResult, LlmSchemaExportOptions } from './exporters/llm-structured-output';
 export type {
     Exporter,
     ExportOptions,

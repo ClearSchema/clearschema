@@ -397,7 +397,7 @@ describe('Union Field: Type-Specific Modifiers', () => {
 describe('External File References', () => {
   describe('import syntax parsing', () => {
     it('parses import with specific definitions', () => {
-      const input = `import: ./common/types.cs
+      const input = `import: ./common/types.clear
   - User
   - Address
 
@@ -405,12 +405,12 @@ user: $ref: User`;
 
       const schema = parse(input);
       expect(schema.imports).toHaveLength(1);
-      expect(schema.imports[0].path).toBe('./common/types.cs');
+      expect(schema.imports[0].path).toBe('./common/types.clear');
       expect(schema.imports[0].definitions).toEqual(['User', 'Address']);
     });
 
     it('parses wildcard import', () => {
-      const input = `import: ./common/types.cs
+      const input = `import: ./common/types.clear
   - *`;
 
       const schema = parse(input);
@@ -418,9 +418,9 @@ user: $ref: User`;
     });
 
     it('parses multiple imports', () => {
-      const input = `import: ./common/user.cs
+      const input = `import: ./common/user.clear
   - User
-import: ./common/address.cs
+import: ./common/address.clear
   - Address`;
 
       const schema = parse(input);
@@ -430,9 +430,9 @@ import: ./common/address.cs
 
   describe('reference resolution', () => {
     it('resolves reference to imported definition', async () => {
-      const schema = await parseWithImports('schema.cs', {
+      const schema = await parseWithImports('schema.clear', {
         fileLoader: mockFileLoader({
-          './common/types.cs': `User: object:
+          './common/types.clear': `User: object:
   name: string.required: Name`
         })
       });
@@ -441,7 +441,7 @@ import: ./common/address.cs
     });
 
     it('errors on reference to non-imported definition', () => {
-      const input = `import: ./common/types.cs
+      const input = `import: ./common/types.clear
   - User
 
 address: $ref: Address`;
@@ -451,11 +451,11 @@ address: $ref: Address`;
 
     it('detects circular imports', async () => {
       const loader = mockFileLoader({
-        'a.cs': `import: ./b.cs\n  - *`,
-        'b.cs': `import: ./a.cs\n  - *`
+        'a.clear': `import: ./b.clear\n  - *`,
+        'b.clear': `import: ./a.clear\n  - *`
       });
 
-      await expect(parseWithImports('a.cs', { fileLoader: loader }))
+      await expect(parseWithImports('a.clear', { fileLoader: loader }))
         .rejects.toThrow(/circular import/i);
     });
   });

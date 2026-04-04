@@ -120,7 +120,7 @@ First-class editor support.
 - ✅ TextMate grammar for syntax highlighting
 - ✅ VS Code extension scaffolding
 - ✅ Language configuration (comments, brackets, indentation)
-- ✅ File association (.cs, .clearschema)
+- ✅ File association (.clear)
 
 **Milestone:** Syntax highlighting while authoring schemas.
 
@@ -134,7 +134,7 @@ First-class editor support.
 Make the project discoverable and contributor-friendly.
 
 - ✅ Comprehensive README with examples and comparisons
-- ✅ Example schemas (user.cs, ecommerce.cs)
+- ✅ Example schemas (user.clear, ecommerce.clear)
 - ✅ Complete CHANGELOG with all versions
 - ✅ Updated ROADMAP with phase status
 - ✅ Project badges (version, tests, coverage, license)
