@@ -262,7 +262,7 @@ user: $ref: #/$defs/User`);
 ```typescript
 describe('JSON Schema Export Snapshots', () => {
   it('matches snapshot for complex schema', () => {
-    const input = readFixture('complex-user.cs');
+    const input = readFixture('complex-user.clear');
     const output = exportJsonSchema(parse(input));
 
     expect(output).toMatchSnapshot();

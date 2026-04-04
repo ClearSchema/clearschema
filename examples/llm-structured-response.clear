@@ -1,0 +1,20 @@
+# Sentiment Analysis Response
+# Demonstrates a structured response schema for LLM outputs
+
+analysis: object.required: Sentiment analysis result
+  sentiment: string.required: Overall sentiment label
+    ^ enum: [positive, negative, neutral, mixed]
+
+  confidence: number.required: Confidence score
+    ^ min: 0
+    ^ max: 1
+
+  reasoning: string.required: Explanation of the sentiment assessment
+    ^ minLength: 10
+
+  keywords: array: Key phrases that influenced the analysis
+    - string
+
+  language: string: Detected language code
+    ^ pattern: ^[a-z]{2}$
+    ^ default: en

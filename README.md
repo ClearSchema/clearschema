@@ -80,26 +80,26 @@ export interface Schema {
 ## Installation
 
 ```bash
-npm install clearschema
+npm install @clearschema/core
 ```
 
 ### CLI Usage
 
 ```bash
 # Export to JSON Schema
-clearschema schema.cs -f json-schema -o schema.json
+clearschema schema.clear -f json-schema -o schema.json
 
 # Export to TypeScript
-clearschema schema.cs -f typescript -o types.ts
+clearschema schema.clear -f typescript -o types.ts
 
 # Export to Pydantic (Python)
-clearschema schema.cs -f pydantic -o models.py
+clearschema schema.clear -f pydantic -o models.py
 
 # Export to OpenAPI 3.1
-clearschema schema.cs -f openapi -o openapi.json
+clearschema schema.clear -f openapi -o openapi.json
 
 # Use different JSON Schema version
-clearschema schema.cs --schema-version draft-07 -o schema.json
+clearschema schema.clear --schema-version draft-07 -o schema.json
 ```
 
 ### API Usage
@@ -113,7 +113,7 @@ import {
   exportOpenAPI,
   resolveReferences,
   resolveImports
-} from 'clearschema';
+} from '@clearschema/core';
 
 const schema = parse(`
   name: string.required: Full name
@@ -153,6 +153,42 @@ const withImports = await resolveImports(schema, {
 - API documentation that stays in sync with code
 - Schemas that humans actually read and review
 - Projects requiring JSON Schema, TypeScript, and Python
+
+---
+
+## Use Cases
+
+### API Schema Generation
+
+Define your API contracts in ClearSchema and generate JSON Schema for request/response validation. Keep your schemas human-readable while producing standards-compliant output for any validation library.
+
+```bash
+clearschema api-request.clear -f json-schema -o request-schema.json
+```
+
+### TypeScript Type Generation
+
+Generate TypeScript interfaces directly from your schema definitions. Ensure your types stay in sync with your API contracts without manual maintenance.
+
+```bash
+clearschema models.clear -f typescript -o types.ts
+```
+
+### Python/Pydantic Models
+
+Generate Pydantic model classes for Python services. Share the same schema source between your TypeScript frontend and Python backend.
+
+```bash
+clearschema models.clear -f pydantic -o models.py
+```
+
+### LLM Structured Output
+
+Generate schemas compatible with OpenAI, Anthropic, and Google structured output APIs. The LLM exporter produces strict-mode JSON Schema with `additionalProperties: false` and no unsupported constraints.
+
+```bash
+clearschema tool-definition.clear -f llm-schema -o tool-schema.json
+```
 
 ---
 
@@ -317,7 +353,7 @@ npm test
 npm run build
 
 # Run CLI locally
-node dist/cli/index.js ../examples/user.cs
+node dist/cli/index.js ../examples/user.clear
 ```
 
 ---

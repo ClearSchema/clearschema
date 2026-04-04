@@ -1,0 +1,25 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          registry-url: 'https://registry.npmjs.org'
+      - run: npm ci
+        working-directory: clearschema
+      - run: npm run build
+        working-directory: clearschema
+      - run: npm test
+        working-directory: clearschema
+      - run: npm publish --access public
+        working-directory: clearschema
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

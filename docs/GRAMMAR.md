@@ -20,7 +20,7 @@ targets         = "targets:" , "[" , identifier , { "," , identifier } , "]" ;
 import_decl     = "import:" , file_path , NEWLINE , { INDENT , "-" , ( identifier | "*" ) , NEWLINE } ;
 file_path       = quoted_string | relative_path ;
 relative_path   = [ "./" | "../" ] , { path_segment , "/" } , filename ;
-filename        = identifier , ".cs" ;
+filename        = identifier , ".clear" ;
 
 (* Schema Definitions *)
 definitions     = "$defs:" , NEWLINE , { INDENT , definition , NEWLINE } ;
@@ -179,7 +179,7 @@ adminUser: allOf: Admin user with extra permissions
 ### External Imports
 
 ```yaml
-import: ./common/types.cs
+import: ./common/types.clear
   - User
   - Address
 
@@ -190,7 +190,7 @@ shippingAddress: $ref: Address
 ### Wildcard Import
 
 ```yaml
-import: ./common/types.cs
+import: ./common/types.clear
   - *
 ```
 
@@ -311,12 +311,12 @@ The following are reserved and cannot be used as field names:
 
 ## File Extension
 
-ClearSchema files use the `.cs` extension:
+ClearSchema files use the `.clear` extension:
 
 ```
 schemas/
-  user.cs
+  user.clear
   common/
-    types.cs
-    address.cs
+    types.clear
+    address.clear
 ```

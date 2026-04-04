@@ -212,7 +212,7 @@ Modifiers are type-specific. Applying an incompatible modifier is a **parse erro
 
 ```
 ParseError: Invalid modifier 'minLength' for number field
-  --> schema.cs:3:5
+  --> schema.clear:3:5
    |
  3 |   ^ minLength: 10
    |     ^^^^^^^^^^ 'minLength' is only valid for string fields

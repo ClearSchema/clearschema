@@ -1,0 +1,22 @@
+# Agent Plan Output
+# Demonstrates a multi-step agent output schema
+
+plan: object.required: Agent execution plan
+  goal: string.required: High-level objective
+    ^ minLength: 5
+
+  steps: array.required: Ordered list of planned actions
+    - object:
+        action: string.required: What the agent will do
+        reasoning: string.required: Why this step is needed
+        status: string.required: Current step state
+          ^ enum: [pending, in_progress, completed, failed]
+        tool: string: Tool or API to invoke
+        depends_on: array: Indices of prerequisite steps
+          - integer
+
+  summary: string: Final outcome or conclusion
+
+  confidence: number: Overall plan confidence
+    ^ min: 0
+    ^ max: 1
