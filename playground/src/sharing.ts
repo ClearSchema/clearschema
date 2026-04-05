@@ -2,7 +2,7 @@ import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from
 import type { Format } from './output';
 
 const VALID_FORMATS: readonly string[] = [
-  'json-schema', 'typescript', 'pydantic', 'openapi', 'llm-schema',
+  'json-schema', 'typescript', 'pydantic', 'openapi', 'llm-schema', 'zod',
 ];
 
 function isValidFormat(value: string): value is Format {

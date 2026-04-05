@@ -9,10 +9,11 @@ import {
   exportPydantic,
   exportOpenAPI,
   exportLlmSchema,
+  exportZod,
 } from '@clearschema/core';
 import type { Schema } from '@clearschema/core';
 
-export type Format = 'json-schema' | 'typescript' | 'pydantic' | 'openapi' | 'llm-schema';
+export type Format = 'json-schema' | 'typescript' | 'pydantic' | 'openapi' | 'llm-schema' | 'zod';
 
 const FORMAT_LABELS: Record<Format, string> = {
   'json-schema': 'JSON Schema',
@@ -20,9 +21,10 @@ const FORMAT_LABELS: Record<Format, string> = {
   pydantic: 'Pydantic',
   openapi: 'OpenAPI',
   'llm-schema': 'LLM Schema',
+  zod: 'Zod',
 };
 
-const ALL_FORMATS: Format[] = ['json-schema', 'typescript', 'pydantic', 'openapi', 'llm-schema'];
+const ALL_FORMATS: Format[] = ['json-schema', 'typescript', 'pydantic', 'openapi', 'llm-schema', 'zod'];
 
 function languageForFormat(format: Format) {
   switch (format) {
@@ -31,6 +33,7 @@ function languageForFormat(format: Format) {
     case 'llm-schema':
       return json();
     case 'typescript':
+    case 'zod':
       return javascript({ typescript: true });
     case 'pydantic':
       return python();
@@ -39,11 +42,12 @@ function languageForFormat(format: Format) {
   }
 }
 
-let outputView: EditorView;
-let languageCompartment: Compartment;
+let outputView: EditorView | null = null;
+let languageCompartment: Compartment | null = null;
 let currentFormat: Format = 'json-schema';
 let onWarnings: (warnings: string[]) => void = () => {};
 let onFormatChange: (format: Format) => void = () => {};
+let tabBarEl: HTMLElement | null = null;
 
 export function createOutputPanel(
   parent: HTMLElement,
@@ -72,6 +76,7 @@ export function createOutputPanel(
 
   const tabBar = document.createElement('div');
   tabBar.id = 'format-tabs';
+  tabBarEl = tabBar;
   for (const fmt of ALL_FORMATS) {
     const btn = document.createElement('button');
     btn.className = 'format-tab' + (fmt === currentFormat ? ' active' : '');
@@ -91,8 +96,8 @@ export function createOutputPanel(
 
 export function setFormat(format: Format) {
   currentFormat = format;
-  outputView.dispatch({
-    effects: languageCompartment.reconfigure(languageForFormat(format)),
+  outputView!.dispatch({
+    effects: languageCompartment!.reconfigure(languageForFormat(format)),
   });
 }
 
@@ -102,15 +107,14 @@ export function getFormat(): Format {
 
 export function setFormatActive(format: Format) {
   currentFormat = format;
-  const tabBar = document.getElementById('format-tabs');
-  if (tabBar) {
-    tabBar.querySelectorAll('.format-tab').forEach((btn) => {
+  if (tabBarEl) {
+    tabBarEl.querySelectorAll('.format-tab').forEach((btn) => {
       const el = btn as HTMLElement;
       el.classList.toggle('active', el.dataset['format'] === format);
     });
   }
-  outputView.dispatch({
-    effects: languageCompartment.reconfigure(languageForFormat(format)),
+  outputView!.dispatch({
+    effects: languageCompartment!.reconfigure(languageForFormat(format)),
   });
 }
 
@@ -151,15 +155,27 @@ function exportSchema(
       const result = exportLlmSchema(schema);
       return { text: JSON.stringify(result.schema, null, 2), warnings: result.warnings };
     }
+    case 'zod':
+      return { text: exportZod(schema), warnings: [] };
   }
 }
 
 function setOutputContent(text: string) {
-  outputView.dispatch({
+  outputView!.dispatch({
     changes: {
       from: 0,
-      to: outputView.state.doc.length,
+      to: outputView!.state.doc.length,
       insert: text,
     },
   });
+}
+
+export function destroyOutputPanel(): void {
+  if (outputView) {
+    outputView.destroy();
+    outputView = null;
+  }
+  languageCompartment = null;
+  tabBarEl = null;
+  currentFormat = 'json-schema';
 }
