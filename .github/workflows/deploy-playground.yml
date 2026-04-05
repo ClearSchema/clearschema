@@ -1,10 +1,13 @@
-name: Deploy Playground to GitHub Pages
+name: Deploy Documentation to GitHub Pages
 
 on:
   push:
     branches: [main]
     paths:
-      - 'playground/**'
+      - 'website/**'
+      - 'clearschema/src/**'
+      - 'examples/**'
+      - 'CHANGELOG.md'
 
   workflow_dispatch:
 
@@ -22,26 +25,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: playground/package-lock.json
+          cache-dependency-path: website/package-lock.json
 
-      - name: Install dependencies
-        working-directory: playground
-        run: npm ci
+      - name: Build clearschema
+        run: cd clearschema && npm ci && npm run build
 
-      - name: Build
-        working-directory: playground
-        run: npm run build
+      - name: Install website dependencies
+        run: cd website && npm ci
+
+      - name: Build VitePress site
+        run: cd website && npx vitepress build
 
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: playground/dist
+          path: website/.vitepress/dist
 
   deploy:
     environment:
