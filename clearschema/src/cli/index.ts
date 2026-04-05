@@ -136,8 +136,16 @@ function handleImport(args: string[]): void {
         if (arg === '-h' || arg === '--help') {
             help = true;
         } else if (arg === '-o' || arg === '--output') {
+            if (i + 1 >= args.length) {
+                console.error(`Error: "${arg}" requires a value`);
+                process.exit(1);
+            }
             output = args[++i];
         } else if (arg === '-f' || arg === '--format') {
+            if (i + 1 >= args.length) {
+                console.error(`Error: "${arg}" requires a value`);
+                process.exit(1);
+            }
             const fmt = args[++i];
             const validFormats: ImportFormat[] = ['clear', 'json-schema', 'typescript', 'pydantic', 'openapi', 'llm-schema', 'zod'];
             if (validFormats.includes(fmt as ImportFormat)) {

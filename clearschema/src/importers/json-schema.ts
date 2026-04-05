@@ -457,6 +457,11 @@ export class JsonSchemaImporter {
     private importAnyOf(name: string, obj: any): Field {
         const elements: any[] = obj.anyOf;
 
+        // Empty anyOf — treat as composition (degenerate case)
+        if (elements.length === 0) {
+            return this.importComposition(name, obj, 'anyOf');
+        }
+
         // Case 1: Nullable — exactly 2 elements, one is { type: "null" }
         if (elements.length === 2) {
             const nullIndex = elements.findIndex(isNullOnlySchema);
