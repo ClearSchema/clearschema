@@ -1,12 +1,12 @@
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string';
 import type { Format } from './output';
 
-const VALID_FORMATS: readonly string[] = [
+const VALID_FORMATS = [
   'json-schema', 'typescript', 'pydantic', 'openapi', 'llm-schema', 'zod',
-];
+] as const;
 
 function isValidFormat(value: string): value is Format {
-  return VALID_FORMATS.includes(value);
+  return (VALID_FORMATS as readonly string[]).includes(value);
 }
 
 interface PlaygroundState {
