@@ -2,7 +2,6 @@ import {
     Schema,
     Field,
     FieldTypeName,
-    PrimitiveType,
     StringField,
     NumberField,
     BooleanField,
@@ -149,7 +148,7 @@ export class JsonSchemaImporter {
     // Definitions
     // -----------------------------------------------------------------------
 
-    private importDefinitions(jsonSchema: any, draft: string): SchemaDefinition[] {
+    private importDefinitions(jsonSchema: any, _draft: string): SchemaDefinition[] {
         const defs: SchemaDefinition[] = [];
         const defsObj = jsonSchema.$defs ?? jsonSchema.definitions ?? {};
 
