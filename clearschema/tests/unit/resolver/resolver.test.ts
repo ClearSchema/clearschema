@@ -60,6 +60,99 @@ user: $ref: #/$defs/User`;
         expect(userField.fields[1].resolvedRef).toBeDefined();
     });
 
+    it('resolves $ref value type in map fields', () => {
+        const schema = {
+            location: { start: { line: 1, column: 0, offset: 0 }, end: { line: 1, column: 0, offset: 0 } },
+            imports: [],
+            definitions: [
+                {
+                    name: 'Address',
+                    location: { start: { line: 1, column: 0, offset: 0 }, end: { line: 1, column: 0, offset: 0 } },
+                    field: {
+                        name: 'Address',
+                        type: 'object' as const,
+                        description: 'Address',
+                        required: false,
+                        nullable: false,
+                        rawModifiers: {},
+                        modifiers: [],
+                        fields: [
+                            {
+                                name: 'city',
+                                type: 'string' as const,
+                                description: 'City',
+                                required: false,
+                                nullable: false,
+                                rawModifiers: {},
+                                modifiers: [],
+                                location: { start: { line: 1, column: 0, offset: 0 }, end: { line: 1, column: 0, offset: 0 } },
+                            },
+                        ],
+                        location: { start: { line: 1, column: 0, offset: 0 }, end: { line: 1, column: 0, offset: 0 } },
+                    },
+                },
+            ],
+            fields: [
+                {
+                    name: 'addresses',
+                    type: 'map' as const,
+                    description: 'Addresses by key',
+                    required: false,
+                    nullable: false,
+                    rawModifiers: {},
+                    modifiers: [],
+                    valueType: {
+                        name: 'addressRef',
+                        type: 'ref' as const,
+                        ref: '#/$defs/Address',
+                        description: '',
+                        required: false,
+                        nullable: false,
+                        rawModifiers: {},
+                        modifiers: [],
+                        location: { start: { line: 1, column: 0, offset: 0 }, end: { line: 1, column: 0, offset: 0 } },
+                    },
+                    location: { start: { line: 1, column: 0, offset: 0 }, end: { line: 1, column: 0, offset: 0 } },
+                },
+            ],
+        };
+
+        const resolved = resolveReferences(schema as any);
+
+        const mapField = resolved.fields[0] as any;
+        expect(mapField.type).toBe('map');
+        expect(mapField.valueType.type).toBe('ref');
+        expect(mapField.valueType.resolvedRef).toBeDefined();
+        expect(mapField.valueType.resolvedRef.type).toBe('object');
+    });
+
+    it('passes through map with primitive value type unchanged', () => {
+        const schema = {
+            location: { start: { line: 1, column: 0, offset: 0 }, end: { line: 1, column: 0, offset: 0 } },
+            imports: [],
+            definitions: [],
+            fields: [
+                {
+                    name: 'metadata',
+                    type: 'map' as const,
+                    description: 'Metadata',
+                    required: false,
+                    nullable: false,
+                    rawModifiers: {},
+                    modifiers: [],
+                    valueType: 'string',
+                    location: { start: { line: 1, column: 0, offset: 0 }, end: { line: 1, column: 0, offset: 0 } },
+                },
+            ],
+        };
+
+        const resolved = resolveReferences(schema as any);
+
+        const mapField = resolved.fields[0] as any;
+        expect(mapField.type).toBe('map');
+        expect(mapField.valueType).toBe('string');
+    });
+
     it('resolves references in arrays', () => {
         const input = `$defs:
   User: object: User

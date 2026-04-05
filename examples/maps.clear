@@ -1,0 +1,41 @@
+# Map/Dictionary Examples
+# Demonstrates map type usage across various patterns
+
+$defs:
+  Config: object: Configuration entry
+    key: string.required: Config key
+    value: string.required: Config value
+    enabled: boolean: Whether this config is active
+      ^ default: true
+
+# Simple map with string values
+metadata: map: Key-value metadata tags
+  - string
+
+# Map with object values
+headers: map: HTTP headers with details
+  - object:
+      value: string.required: Header value
+      sensitive: boolean: Whether the header is sensitive
+        ^ default: false
+
+# Map with $ref values
+configs: map: Named configurations
+  - $ref: #/$defs/Config
+
+# Map inside an array
+records: array: List of key-value record sets
+  - map:
+    - string
+
+# Nullable map
+labels: map.nullable: Optional resource labels
+  - string
+
+# Map inside an object
+service: object.required: Service definition
+  name: string.required: Service name
+  env: map: Environment variables
+    - string
+  ports: array: Exposed ports
+    - integer

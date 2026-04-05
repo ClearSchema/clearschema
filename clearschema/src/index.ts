@@ -48,6 +48,7 @@ export type {
     NullField,
     ObjectField,
     ArrayField,
+    MapField,
     TupleArrayField,
     UnionField,
     RefField,

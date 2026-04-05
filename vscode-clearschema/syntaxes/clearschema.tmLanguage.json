@@ -124,7 +124,7 @@
       "patterns": [
         {
           "name": "storage.type.primitive.clearschema",
-          "match": "\\b(string|number|integer|boolean|null|object|array)\\b"
+          "match": "\\b(string|number|integer|boolean|null|object|array|map)\\b"
         },
         {
           "name": "storage.type.reference.clearschema",

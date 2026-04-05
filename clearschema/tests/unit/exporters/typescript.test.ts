@@ -1,5 +1,6 @@
 import { parse } from '../../../src/parser/parser';
 import { exportTypeScript } from '../../../src/exporters/typescript';
+import { Schema, MapField, ArrayField, RefField } from '../../../src/ast/types';
 
 describe('TypeScript Exporter', () => {
     describe('primitive types', () => {
@@ -82,6 +83,122 @@ describe('TypeScript Exporter', () => {
             const output = exportTypeScript(schema);
 
             expect(output).toContain('coordinates?: [number, number];');
+        });
+    });
+
+    describe('map types', () => {
+        it('exports map with string values', () => {
+            const schema = parse(`metadata: map: Metadata
+  - string`);
+            const output = exportTypeScript(schema);
+
+            expect(output).toContain('metadata?: Record<string, string>;');
+        });
+
+        it('exports map with object values', () => {
+            const schema = parse(`users: map: Users by ID
+  - object:
+      name: string.required: Name
+      age: number: Age`);
+            const output = exportTypeScript(schema);
+
+            expect(output).toContain('users?: Record<string, { name: string; age?: number }>;');
+        });
+
+        it('exports nullable map', () => {
+            const schema = parse(`metadata: map.nullable: Metadata
+  - string`);
+            const output = exportTypeScript(schema);
+
+            expect(output).toContain('metadata?: Record<string, string> | null;');
+        });
+
+        it('exports map with $ref values', () => {
+            const loc = { start: { line: 1, column: 1, offset: 0 }, end: { line: 1, column: 1, offset: 0 } };
+            const schema: Schema = {
+                location: loc,
+                imports: [],
+                definitions: [],
+                fields: [
+                    {
+                        name: 'users',
+                        type: 'map',
+                        description: 'Users',
+                        required: false,
+                        nullable: false,
+                        rawModifiers: {},
+                        modifiers: [],
+                        location: loc,
+                        valueType: {
+                            name: '',
+                            type: 'ref',
+                            ref: '#/$defs/User',
+                            description: '',
+                            required: false,
+                            nullable: false,
+                            rawModifiers: {},
+                            modifiers: [],
+                            location: loc,
+                        } as RefField,
+                    } as MapField,
+                ],
+            };
+            const output = exportTypeScript(schema);
+
+            expect(output).toContain('users?: Record<string, User>;');
+        });
+
+        it('exports array of maps', () => {
+            const schema = parse(`items: array: Items
+  - map:
+      - string`);
+            const output = exportTypeScript(schema);
+
+            expect(output).toContain('items?: Record<string, string>[];');
+        });
+
+        it('exports map of arrays', () => {
+            const loc = { start: { line: 1, column: 1, offset: 0 }, end: { line: 1, column: 1, offset: 0 } };
+            const schema: Schema = {
+                location: loc,
+                imports: [],
+                definitions: [],
+                fields: [
+                    {
+                        name: 'groups',
+                        type: 'map',
+                        description: 'Groups',
+                        required: false,
+                        nullable: false,
+                        rawModifiers: {},
+                        modifiers: [],
+                        location: loc,
+                        valueType: {
+                            name: '',
+                            type: 'array',
+                            description: '',
+                            required: false,
+                            nullable: false,
+                            rawModifiers: {},
+                            modifiers: [],
+                            location: loc,
+                            itemType: 'string',
+                        } as ArrayField,
+                    } as MapField,
+                ],
+            };
+            const output = exportTypeScript(schema);
+
+            expect(output).toContain('groups?: Record<string, string[]>;');
+        });
+
+        it('exports map of maps', () => {
+            const schema = parse(`nested: map: Nested
+  - map:
+      - string`);
+            const output = exportTypeScript(schema);
+
+            expect(output).toContain('nested?: Record<string, Record<string, string>>;');
         });
     });
 

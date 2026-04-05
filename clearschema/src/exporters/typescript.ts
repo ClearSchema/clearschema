@@ -3,6 +3,7 @@ import {
     Field,
     ObjectField,
     ArrayField,
+    MapField,
     TupleArrayField,
     UnionField,
     RefField,
@@ -108,6 +109,9 @@ export class TypeScriptExporter implements Exporter<string> {
             case 'array':
                 baseType = this.exportArrayType(field as ArrayField, options);
                 break;
+            case 'map':
+                baseType = this.exportMapType(field as MapField, options);
+                break;
             case 'array.tuple':
                 baseType = this.exportTupleType(field as TupleArrayField, options);
                 break;
@@ -159,6 +163,18 @@ export class TypeScriptExporter implements Exporter<string> {
         }
 
         return `${itemType}[]`;
+    }
+
+    private exportMapType(field: MapField, options?: TypeScriptExportOptions): string {
+        let valueType: string;
+
+        if (typeof field.valueType === 'string') {
+            valueType = this.mapPrimitiveType(field.valueType);
+        } else {
+            valueType = this.exportFieldType(field.valueType, options);
+        }
+
+        return `Record<string, ${valueType}>`;
     }
 
     private exportTupleType(field: TupleArrayField, options?: TypeScriptExportOptions): string {
