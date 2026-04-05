@@ -17,6 +17,10 @@ import {
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { DocumentState } from './utils';
+import { getCompletions } from './completion';
+import { getHover } from './hover';
+import { getDefinition } from './definition';
+import { getDocumentSymbols } from './symbols';
 
 // Create the LSP connection (supports stdio and IPC)
 const connection = createConnection(ProposedFeatures.all);
@@ -96,24 +100,55 @@ documents.onDidClose((event) => {
 
 // --- Stub handlers (Units 2-5 will implement these) ---
 
-connection.onCompletion((_params: CompletionParams): CompletionItem[] => {
-    // Unit 2: Autocomplete
-    return [];
+connection.onCompletion((params: CompletionParams): CompletionItem[] => {
+    const doc = documents.get(params.textDocument.uri);
+    if (!doc) return [];
+
+    const text = doc.getText();
+    const allLines = text.split('\n');
+    const lineNumber = params.position.line;
+    const lineText = allLines[lineNumber] ?? '';
+    const character = params.position.character;
+
+    const state = documentStates.get(params.textDocument.uri);
+    const schema = state ? state.getSchema() : null;
+
+    return getCompletions(lineText, character, allLines, lineNumber, schema);
 });
 
-connection.onHover((_params: HoverParams): Hover | null => {
-    // Unit 3: Hover documentation
-    return null;
+connection.onHover((params: HoverParams): Hover | null => {
+    const doc = documents.get(params.textDocument.uri);
+    if (!doc) return null;
+
+    const text = doc.getText();
+    const lines = text.split('\n');
+    const lineText = lines[params.position.line] ?? '';
+
+    const state = documentStates.get(params.textDocument.uri);
+    const schema = state ? state.getSchema() : null;
+
+    return getHover(lineText, params.position.character, schema);
 });
 
-connection.onDefinition((_params: DefinitionParams): Definition | null => {
-    // Unit 4: Go-to-definition
-    return null;
+connection.onDefinition((params: DefinitionParams): Definition | null => {
+    const doc = documents.get(params.textDocument.uri);
+    if (!doc) return null;
+
+    const text = doc.getText();
+    const lines = text.split('\n');
+    const lineText = lines[params.position.line] ?? '';
+
+    const state = documentStates.get(params.textDocument.uri);
+    const schema = state ? state.getSchema() : null;
+
+    return getDefinition(lineText, params.position.character, schema, params.textDocument.uri);
 });
 
-connection.onDocumentSymbol((_params: DocumentSymbolParams): DocumentSymbol[] => {
-    // Unit 5: Document symbols
-    return [];
+connection.onDocumentSymbol((params: DocumentSymbolParams): DocumentSymbol[] => {
+    const state = documentStates.get(params.textDocument.uri);
+    const schema = state ? state.getSchema() : null;
+
+    return getDocumentSymbols(schema);
 });
 
 // Wire up document management and start the connection
