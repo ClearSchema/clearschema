@@ -254,6 +254,13 @@ clearschema tool-definition.clear -f llm-schema -o tool-schema.json
 - **Array:** `minItems`, `maxItems`, `uniqueItems`
 - **Universal:** `required`, `nullable`, `default`, `const`, `enum`
 
+### Editor Intelligence (LSP)
+- **Diagnostics:** Real-time error reporting as you type
+- **Autocomplete:** Types, modifiers, and `$ref` targets
+- **Hover docs:** Rich documentation for types, modifiers, and fields
+- **Go-to-definition:** Ctrl+Click on `$ref` navigates to definition
+- **Document symbols:** Outline view of schema structure
+
 ### Advanced Features
 - **Imports:** Split schemas across files with `import:`
 - **Inline modifiers:** `string.required.nullable`

@@ -1,8 +1,8 @@
 {
   "name": "clearschema",
   "displayName": "ClearSchema",
-  "description": "Syntax highlighting for ClearSchema - a human-friendly schema language",
-  "version": "0.1.0",
+  "description": "Syntax highlighting and language support for ClearSchema - a human-friendly schema language",
+  "version": "0.2.0",
   "publisher": "clearschema",
   "engines": {
     "vscode": "^1.80.0"
@@ -10,6 +10,14 @@
   "categories": [
     "Programming Languages"
   ],
+  "activationEvents": [
+    "onLanguage:clearschema"
+  ],
+  "main": "./dist/extension.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w"
+  },
   "contributes": {
     "languages": [
       {
@@ -31,5 +39,13 @@
         "path": "./syntaxes/clearschema.tmLanguage.json"
       }
     ]
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.80.0",
+    "typescript": "^5.9.0"
   }
 }
