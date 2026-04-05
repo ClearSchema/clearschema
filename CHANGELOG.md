@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-04-05
+
+### Added
+
+- **LSP Server for Editor Intelligence**
+  - New `@clearschema/lsp` package — editor-agnostic Language Server Protocol server
+  - Diagnostics: real-time parse errors with line/column as you type
+  - Autocomplete: context-aware suggestions for types, modifiers, `$ref` targets, and inline modifiers
+  - Hover documentation: rich markdown docs for types, modifiers, fields, and `$ref` definitions
+  - Go-to-definition: Ctrl+Click on `$ref` navigates to `$defs` declaration
+  - Document symbols: hierarchical outline view for definitions and fields
+  - VS Code extension upgraded with LSP client (spawns server via IPC)
+  - 91 tests (70 unit + 21 integration)
+
 ## [0.4.0] - 2026-04-05
 
 ### Added
