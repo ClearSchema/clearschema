@@ -42,7 +42,7 @@ focus: this project in general
 **Downsides:** Moderate effort across multiple files. Extension rename touches parser, CLI, VS Code extension, examples, tests, and docs.
 **Confidence:** 95%
 **Complexity:** Medium
-**Status:** Unexplored
+**Status:** Complete (PR #1, commit 4ae55d5) — renamed .cs to .clear, CI/CD via GitHub Actions, npm release workflow with trusted publishing, package renamed to @clearschema/core v0.3.0
 
 ### 2. Browser Playground with Shareable URLs
 **Description:** Ship a single-page web app (GitHub Pages) with ClearSchema input on the left, live output on the right with format tabs (JSON Schema / TypeScript / Pydantic / OpenAPI), inline error highlighting, and shareable URLs.
@@ -50,7 +50,7 @@ focus: this project in general
 **Downsides:** Requires building and maintaining a web frontend. Must stay in sync with the core library.
 **Confidence:** 85%
 **Complexity:** Medium
-**Status:** Unexplored
+**Status:** Complete (PR #2, commit 5d7a603) — Vite SPA with CodeMirror editor, format tabs, shareable URLs, GitHub Pages deployment workflow
 
 ### 3. Target LLM Structured Output as the Wedge Use Case
 **Description:** Reposition ClearSchema as the fastest way to author structured output schemas for LLM APIs (OpenAI, Anthropic, Google). Add an `llm-schema` exporter emitting the exact JSON Schema subset each provider accepts.
@@ -58,7 +58,7 @@ focus: this project in general
 **Downsides:** Risks pigeonholing. Provider requirements change frequently.
 **Confidence:** 72%
 **Complexity:** Medium
-**Status:** Unexplored
+**Status:** Complete (PR #1, commit 4ae55d5) — llm-structured-output exporter with OpenAI/Anthropic/Google targets, $ref inlining, constraint stripping, depth validation
 
 ### 4. LSP Server for Editor Intelligence
 **Description:** Build an LSP providing real-time diagnostics, type/modifier autocomplete, hover-to-preview-output, and go-to-definition for cross-file $ref and imports. Wire into the existing VS Code extension.
@@ -90,7 +90,7 @@ focus: this project in general
 **Downsides:** Requires grammar and parser changes. Must handle across all 4+ exporters consistently.
 **Confidence:** 82%
 **Complexity:** Low
-**Status:** Unexplored
+**Status:** Complete — `map` type with array-style child items, all 5 exporters, LLM omission with warnings, 292 tests
 
 ## Rejection Summary
 
@@ -119,3 +119,4 @@ focus: this project in general
 ## Session Log
 - 2026-04-04: Initial ideation -- 48 generated (6 agents x 8), inaccurate grounding led to "Credibility Reset" as #1
 - 2026-04-04: Re-ran ideation with verified codebase context -- all claimed features confirmed implemented. 48 new ideas generated, 26 unique + 3 cross-cutting = 29 evaluated, 7 survived. Corrected ranked list reflects actual project state.
+- 2026-04-04: Status update -- items #1 (Ship-Ready Bundle), #2 (Browser Playground), and #3 (LLM Exporter) completed. Remaining: #4 LSP, #5 Zod, #6 Reverse Importer, #7 Map/Dictionary.

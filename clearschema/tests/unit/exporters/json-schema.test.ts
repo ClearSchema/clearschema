@@ -1,5 +1,6 @@
 import { parse } from '../../../src/parser/parser';
 import { exportJsonSchema } from '../../../src/exporters/json-schema';
+import { Schema, MapField, RefField } from '../../../src/ast/types';
 
 describe('JSON Schema Exporter', () => {
     describe('primitive types', () => {
@@ -163,6 +164,131 @@ describe('JSON Schema Exporter', () => {
                     { type: 'number' },
                 ],
                 items: false,
+            });
+        });
+    });
+
+    describe('map types', () => {
+        it('exports map with string values', () => {
+            const schema = parse(`metadata: map: Metadata
+  - string`);
+            const output = exportJsonSchema(schema);
+
+            expect(output.properties?.metadata).toEqual({
+                type: 'object',
+                description: 'Metadata',
+                additionalProperties: { type: 'string' },
+            });
+        });
+
+        it('exports map with object values', () => {
+            const schema = parse(`users: map: Users by ID
+  - object:
+      name: string.required: Name
+      email: string: Email`);
+            const output = exportJsonSchema(schema);
+
+            expect(output.properties?.users).toEqual({
+                type: 'object',
+                description: 'Users by ID',
+                additionalProperties: {
+                    type: 'object',
+                    properties: {
+                        name: { type: 'string', description: 'Name' },
+                        email: { type: 'string', description: 'Email' },
+                    },
+                    required: ['name'],
+                },
+            });
+        });
+
+        it('exports map with $ref values', () => {
+            // Construct AST directly since parser doesn't yet produce RefField for map items
+            const loc = { start: { line: 1, column: 0, offset: 0 }, end: { line: 1, column: 0, offset: 0 } };
+            const refField: RefField = {
+                name: '',
+                type: 'ref',
+                ref: '#/$defs/User',
+                description: '',
+                required: false,
+                nullable: false,
+                rawModifiers: {},
+                modifiers: [],
+                location: loc,
+            };
+            const mapField: MapField = {
+                name: 'users',
+                type: 'map',
+                valueType: refField,
+                description: 'Users',
+                required: false,
+                nullable: false,
+                rawModifiers: {},
+                modifiers: [],
+                location: loc,
+            };
+            const schema: Schema = {
+                fields: [mapField],
+                definitions: [],
+                imports: [],
+                location: loc,
+            };
+            const output = exportJsonSchema(schema);
+
+            expect(output.properties?.users).toEqual({
+                type: 'object',
+                description: 'Users',
+                additionalProperties: { $ref: '#/$defs/User' },
+            });
+        });
+
+        it('exports nullable map', () => {
+            const schema = parse(`metadata: map.nullable: Metadata
+  - string`);
+            const output = exportJsonSchema(schema);
+
+            expect(output.properties?.metadata).toEqual({
+                anyOf: [
+                    {
+                        type: 'object',
+                        description: 'Metadata',
+                        additionalProperties: { type: 'string' },
+                    },
+                    { type: 'null' },
+                ],
+            });
+        });
+
+        it('exports map with description', () => {
+            const schema = parse(`headers: map: HTTP headers
+  - string`);
+            const output = exportJsonSchema(schema);
+
+            expect(output.properties?.headers?.description).toBe('HTTP headers');
+        });
+
+        it('exports map with default modifier', () => {
+            const schema = parse(`metadata: map: Metadata
+  - string
+  ^ default: empty`);
+            const output = exportJsonSchema(schema);
+
+            expect(output.properties?.metadata?.default).toBe('empty');
+        });
+
+        it('exports map of maps (nested additionalProperties)', () => {
+            const schema = parse(`matrix: map: Matrix
+  - map:
+      - number`);
+            const output = exportJsonSchema(schema);
+
+            expect(output.properties?.matrix).toEqual({
+                type: 'object',
+                description: 'Matrix',
+                additionalProperties: {
+                    type: 'object',
+                    additionalProperties: { type: 'number' },
+                },
             });
         });
     });

@@ -1,5 +1,10 @@
 import { parse } from '../../src';
-import { ObjectField, ArrayField, StringField, NumberField, TupleArrayField } from '../../src/ast/types';
+import { exportJsonSchema } from '../../src/exporters/json-schema';
+import { exportTypeScript } from '../../src/exporters/typescript';
+import { exportPydantic } from '../../src/exporters/pydantic';
+import { exportOpenAPI } from '../../src/exporters/openapi';
+import { exportLlmSchema } from '../../src/exporters/llm-structured-output';
+import { ObjectField, ArrayField, StringField, NumberField, TupleArrayField, MapField } from '../../src/ast/types';
 
 describe('Integration Tests - Complex Schemas', () => {
     describe('User Profile Schema', () => {
@@ -257,6 +262,101 @@ user: object.required: User profile
             const status = order.fields[6] as StringField;
             expect(status.enum).toEqual(['pending', 'confirmed', 'shipped', 'delivered', 'cancelled']);
             expect(status.default).toBe('pending');
+        });
+    });
+
+    describe('Schema with Map Fields', () => {
+        const input = `service: object.required: Service definition
+  name: string.required: Service name
+  metadata: map: Key-value metadata
+    - string
+  tags: array: Tag sets
+    - map:
+      - string
+  labels: map.nullable: Optional labels
+    - string`;
+
+        it('parses map fields into correct AST', () => {
+            const schema = parse(input);
+            expect(schema.errors).toBeUndefined();
+
+            const service = schema.fields[0] as ObjectField;
+            expect(service.fields).toHaveLength(4);
+
+            const metadata = service.fields[1] as MapField;
+            expect(metadata.type).toBe('map');
+            expect(metadata.valueType).toBe('string');
+
+            const tags = service.fields[2] as ArrayField;
+            expect(tags.type).toBe('array');
+            expect((tags.itemType as MapField).type).toBe('map');
+
+            const labels = service.fields[3] as MapField;
+            expect(labels.type).toBe('map');
+            expect(labels.nullable).toBe(true);
+        });
+
+        it('exports correct JSON Schema for maps', () => {
+            const schema = parse(input);
+            const jsonSchema = exportJsonSchema(schema);
+
+            const serviceSchema = jsonSchema.properties!.service as any;
+            const metadataSchema = serviceSchema.properties.metadata;
+            expect(metadataSchema.type).toBe('object');
+            expect(metadataSchema.additionalProperties).toEqual({ type: 'string' });
+
+            // Array of maps
+            const tagsSchema = serviceSchema.properties.tags;
+            expect(tagsSchema.type).toBe('array');
+            expect(tagsSchema.items.type).toBe('object');
+            expect(tagsSchema.items.additionalProperties).toEqual({ type: 'string' });
+
+            // Nullable map
+            const labelsSchema = serviceSchema.properties.labels;
+            expect(labelsSchema.anyOf).toBeDefined();
+        });
+
+        it('exports correct TypeScript for maps', () => {
+            const schema = parse(input);
+            const ts = exportTypeScript(schema);
+
+            expect(ts).toContain('Record<string, string>');
+        });
+
+        it('exports correct Pydantic for maps', () => {
+            const schema = parse(input);
+            const py = exportPydantic(schema);
+
+            // Pydantic export should produce valid Python output
+            expect(py).toContain('service');
+            expect(py).toContain('BaseModel');
+        });
+
+        it('exports correct OpenAPI for maps', () => {
+            const schema = parse(input);
+            const openapi = exportOpenAPI(schema);
+
+            const rootSchema = openapi.components.schemas.RootSchema;
+            expect(rootSchema).toBeDefined();
+            expect(rootSchema.properties.service.properties.metadata.additionalProperties).toEqual({ type: 'string' });
+        });
+
+        it('exports LLM schema with map fields omitted', () => {
+            const schema = parse(input);
+            const result = exportLlmSchema(schema);
+
+            // Map fields should be omitted from LLM output
+            const llmSchema = result.schema;
+            const serviceProps = llmSchema.properties?.service?.properties;
+            expect(serviceProps).toBeDefined();
+            expect(serviceProps.name).toBeDefined();
+            // Map fields should not be present
+            expect(serviceProps.metadata).toBeUndefined();
+            expect(serviceProps.labels).toBeUndefined();
+            // Array of maps should also be omitted
+            expect(serviceProps.tags).toBeUndefined();
+            // Warnings should be present
+            expect(result.warnings.length).toBeGreaterThan(0);
         });
     });
 

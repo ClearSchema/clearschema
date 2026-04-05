@@ -164,6 +164,13 @@ export function resolveReferences(schema: Schema): Schema {
             };
         }
 
+        if (field.type === 'map' && typeof field.valueType !== 'string') {
+            return {
+                ...field,
+                valueType: resolveField(field.valueType),
+            };
+        }
+
         if (field.type === 'array.tuple') {
             return {
                 ...field,

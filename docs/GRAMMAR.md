@@ -34,7 +34,7 @@ field           = field_name , ":" , field_type , [ ".required" ] , [ ".nullable
 field_name      = identifier ;
 field_type      = primitive_type | complex_type | union_type | reference_type | composition_type ;
 primitive_type  = "string" | "number" | "integer" | "boolean" | "null" ;
-complex_type    = "object" | "array" | "array.tuple" ;
+complex_type    = "object" | "array" | "array.tuple" | "map" ;
 union_type      = field_type , { "|" , field_type } ;
 reference_type  = "$ref" ;
 composition_type = "allOf" | "anyOf" | "oneOf" ;  (* "extends" reserved for future use *)
@@ -139,6 +139,50 @@ users: array: User list
       name: string.required: User name
       email: string.required: Email
         ^ format: email
+```
+
+### Map (Dictionary)
+
+```yaml
+metadata: map: Key-value metadata
+  - string
+```
+
+### Map with Object Values
+
+```yaml
+headers: map: HTTP headers with details
+  - object:
+      value: string.required: Header value
+      sensitive: boolean: Whether the header is sensitive
+        ^ default: false
+```
+
+### Map with Reference Values
+
+```yaml
+$defs:
+  Config: object: Configuration entry
+    key: string.required: Config key
+    value: string.required: Config value
+
+configs: map: Named configurations
+  - $ref: #/$defs/Config
+```
+
+### Nullable Map
+
+```yaml
+labels: map.nullable: Optional labels
+  - string
+```
+
+### Map Inside Array
+
+```yaml
+records: array: List of records
+  - map:
+    - string
 ```
 
 ### Union Type

@@ -213,4 +213,119 @@ b: string: B`);
             expect(propWarnings).toHaveLength(0);
         });
     });
+
+    describe('map field omission', () => {
+        it('omits map field from output and emits warning', () => {
+            const schema = parse(`metadata: map: Metadata
+  - string`);
+            const result = exportLlmSchema(schema);
+
+            expect(result.schema.properties.metadata).toBeUndefined();
+            expect(result.warnings.some((w: string) => w.includes('map') && w.includes('metadata'))).toBe(true);
+        });
+
+        it('omits only map fields, preserves non-map fields', () => {
+            const schema = parse(`name: string: Name
+metadata: map: Metadata
+  - string
+age: number: Age`);
+            const result = exportLlmSchema(schema);
+
+            expect(result.schema.properties.name).toBeDefined();
+            expect(result.schema.properties.age).toBeDefined();
+            expect(result.schema.properties.metadata).toBeUndefined();
+            expect(result.schema.required).toContain('name');
+            expect(result.schema.required).toContain('age');
+            expect(result.schema.required).not.toContain('metadata');
+        });
+
+        it('omits array of map field with warning', () => {
+            const schema = parse(`items: array: Items
+  - map:
+      - string`);
+            const result = exportLlmSchema(schema);
+
+            expect(result.schema.properties.items).toBeUndefined();
+            expect(result.warnings.some((w: string) => w.includes('map') && w.includes('items'))).toBe(true);
+        });
+
+        it('omits nullable map detected through anyOf wrapper', () => {
+            const schema = parse(`metadata: map.nullable: Metadata
+  - string`);
+            const result = exportLlmSchema(schema);
+
+            expect(result.schema.properties.metadata).toBeUndefined();
+            expect(result.warnings.some((w: string) => w.includes('map') && w.includes('metadata'))).toBe(true);
+        });
+
+        it('produces empty properties and required when map is the only field', () => {
+            const schema = parse(`metadata: map: Metadata
+  - string`);
+            const result = exportLlmSchema(schema);
+
+            expect(result.schema.properties).toEqual({});
+            expect(result.schema.required).toEqual([]);
+        });
+
+        it('omits map field from nested object', () => {
+            const schema = parse(`outer: object: Outer
+  name: string: Name
+  tags: map: Tags
+    - string`);
+            const result = exportLlmSchema(schema);
+
+            const outer = result.schema.properties.outer;
+            expect(outer.properties.name).toBeDefined();
+            expect(outer.properties.tags).toBeUndefined();
+            expect(outer.required).toContain('name');
+            expect(outer.required).not.toContain('tags');
+        });
+
+        it('omits $ref pointing to map definition after inlining', () => {
+            const schema = parse(`$defs:
+  Tags: map: Tags
+    - string
+
+tags: $ref: #/$defs/Tags`);
+            const result = exportLlmSchema(schema);
+
+            expect(result.schema.properties.tags).toBeUndefined();
+            expect(result.warnings.some((w: string) => w.includes('map') && w.includes('tags'))).toBe(true);
+        });
+
+        it('output after map omission is valid strict-mode JSON Schema', () => {
+            const schema = parse(`name: string: Name
+metadata: map: Metadata
+  - string
+address: object: Address
+  street: string: Street
+  city: string: City`);
+            const result = exportLlmSchema(schema);
+
+            // metadata should be omitted
+            expect(result.schema.properties.metadata).toBeUndefined();
+
+            // Root object should be strict
+            expect(result.schema.additionalProperties).toBe(false);
+            expect(result.schema.required).toEqual(expect.arrayContaining(['name', 'address']));
+
+            // Nested object should be strict
+            const addr = result.schema.properties.address;
+            expect(addr.additionalProperties).toBe(false);
+            expect(addr.required).toEqual(expect.arrayContaining(['street', 'city']));
+
+            // Every object with properties should have additionalProperties: false
+            const checkStrict = (node: any): void => {
+                if (node && typeof node === 'object' && !Array.isArray(node)) {
+                    if (node.type === 'object' && node.properties) {
+                        expect(node.additionalProperties).toBe(false);
+                    }
+                    for (const val of Object.values(node)) {
+                        checkStrict(val);
+                    }
+                }
+            };
+            checkStrict(result.schema);
+        });
+    });
 });

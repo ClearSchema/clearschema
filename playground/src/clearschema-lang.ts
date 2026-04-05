@@ -41,7 +41,7 @@ const clearschemaMode = {
     // Array item: - type
     if (stream.match(/^-\s+/)) {
       // The rest could be a type
-      if (stream.match(/\b(string|number|integer|boolean|null|object|array)\b/)) {
+      if (stream.match(/\b(string|number|integer|boolean|null|object|array|map)\b/)) {
         return 'typeName';
       }
       if (stream.match(/\$ref\b/)) return 'typeName';
@@ -61,12 +61,12 @@ const clearschemaMode = {
       stream.eatSpace();
 
       // After colon, try matching types
-      if (stream.match(/\b(string|number|integer|boolean|null|object|array)\b/)) {
+      if (stream.match(/\b(string|number|integer|boolean|null|object|array|map)\b/)) {
         // Eat modifiers like .required, .nullable, .tuple
         while (stream.match(/\.(required|nullable|tuple)\b/)) { /* keep eating */ }
         // Check for union types
         while (stream.eat('|')) {
-          stream.match(/\b(string|number|integer|boolean|null|object|array)\b/);
+          stream.match(/\b(string|number|integer|boolean|null|object|array|map)\b/);
           while (stream.match(/\.(required|nullable|tuple)\b/)) { /* keep eating */ }
         }
         return 'typeName';
@@ -99,7 +99,7 @@ const clearschemaMode = {
     if (stream.match(/\.(required|nullable|tuple)\b/)) return 'modifier';
 
     // Types standalone
-    if (stream.match(/\b(string|number|integer|boolean|null|object|array)\b/)) return 'typeName';
+    if (stream.match(/\b(string|number|integer|boolean|null|object|array|map)\b/)) return 'typeName';
     if (stream.match(/\$ref\b/)) return 'typeName';
     if (stream.match(/\b(allOf|anyOf|oneOf)\b/)) return 'typeName';
 

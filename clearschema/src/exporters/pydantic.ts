@@ -5,6 +5,7 @@ import {
     NumberField,
     ObjectField,
     ArrayField,
+    MapField,
     TupleArrayField,
     UnionField,
     RefField,
@@ -30,7 +31,7 @@ export class PydanticExporter implements Exporter<string> {
         const lines: string[] = [];
         const classLines: string[] = [];
 
-        // Export definitions as classes
+        // Export definitions as classes or type aliases
         for (const def of schema.definitions) {
             if (def.field.type === 'object') {
                 classLines.push(...this.exportObjectAsClass(
@@ -39,6 +40,10 @@ export class PydanticExporter implements Exporter<string> {
                     includeComments,
                     useTyping
                 ));
+                classLines.push('');
+            } else if (def.field.type === 'map') {
+                const mapType = this.exportMapType(def.field as MapField, useTyping);
+                classLines.push(`${def.name} = ${mapType}`);
                 classLines.push('');
             }
         }
@@ -138,6 +143,8 @@ export class PydanticExporter implements Exporter<string> {
                 return this.exportObjectType(field as ObjectField);
             case 'array':
                 return this.exportArrayType(field as ArrayField, useTyping);
+            case 'map':
+                return this.exportMapType(field as MapField, useTyping);
             case 'array.tuple':
                 return this.exportTupleType(field as TupleArrayField, useTyping);
             case 'union':
@@ -203,6 +210,19 @@ export class PydanticExporter implements Exporter<string> {
         }
 
         return `List[${itemType}]`;
+    }
+
+    private exportMapType(field: MapField, useTyping: boolean): string {
+        this.imports.add('from typing import Dict');
+        let valueType: string;
+
+        if (typeof field.valueType === 'string') {
+            valueType = this.mapPrimitiveType(field.valueType);
+        } else {
+            valueType = this.exportFieldType(field.valueType, useTyping);
+        }
+
+        return `Dict[str, ${valueType}]`;
     }
 
     private exportTupleType(field: TupleArrayField, useTyping: boolean): string {

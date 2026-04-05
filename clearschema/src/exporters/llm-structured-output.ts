@@ -55,6 +55,9 @@ export class LlmSchemaExporter implements Exporter<LlmSchemaResult> {
         // Remove $id
         delete result.$id;
 
+        // Omit map fields (not supported in LLM structured output)
+        this.omitMapFields(result, '', warnings);
+
         // Set additionalProperties: false on all objects and ensure all props in required
         this.enforceStrictObjects(result, warnings);
 
@@ -127,6 +130,100 @@ export class LlmSchemaExporter implements Exporter<LlmSchemaResult> {
             result[key] = this.inlineRefs(node[key], defs, visited, warnings);
         }
         return result;
+    }
+
+    private isMapSchema(node: any): boolean {
+        if (node === null || node === undefined || typeof node !== 'object') {
+            return false;
+        }
+        // Direct map: { type: 'object', additionalProperties: <schema>, no properties }
+        if (
+            node.type === 'object' &&
+            typeof node.additionalProperties !== 'boolean' &&
+            node.additionalProperties !== undefined &&
+            !node.properties
+        ) {
+            return true;
+        }
+        // Nullable map via anyOf wrapper: e.g. { anyOf: [{ type: 'null' }, <mapSchema>] }
+        if (Array.isArray(node.anyOf)) {
+            return node.anyOf.some((variant: any) => this.isMapSchema(variant));
+        }
+        return false;
+    }
+
+    private omitMapFields(node: any, path: string, warnings: string[]): void {
+        if (node === null || node === undefined || typeof node !== 'object') {
+            return;
+        }
+
+        if (Array.isArray(node)) {
+            for (let i = 0; i < node.length; i++) {
+                this.omitMapFields(node[i], `${path}[${i}]`, warnings);
+            }
+            return;
+        }
+
+        // If this node has properties, check each property for map schemas
+        if (node.properties && typeof node.properties === 'object') {
+            const keysToRemove: string[] = [];
+
+            for (const key of Object.keys(node.properties)) {
+                const prop = node.properties[key];
+
+                // Check if property itself is a map
+                if (this.isMapSchema(prop)) {
+                    keysToRemove.push(key);
+                    continue;
+                }
+
+                // Check if property is an array whose items is a map
+                if (
+                    prop &&
+                    prop.type === 'array' &&
+                    prop.items &&
+                    this.isMapSchema(prop.items)
+                ) {
+                    keysToRemove.push(key);
+                    continue;
+                }
+            }
+
+            for (const key of keysToRemove) {
+                const fieldPath = path ? `${path}.${key}` : key;
+                warnings.push(
+                    `Omitted map field '${fieldPath}': map/dictionary types are not supported in LLM structured output mode`
+                );
+                delete node.properties[key];
+                if (Array.isArray(node.required)) {
+                    node.required = node.required.filter((r: string) => r !== key);
+                }
+            }
+
+            // Recurse into remaining properties
+            for (const key of Object.keys(node.properties)) {
+                const childPath = path ? `${path}.${key}` : key;
+                this.omitMapFields(node.properties[key], childPath, warnings);
+            }
+        }
+
+        // Recurse into array items
+        if (node.items && typeof node.items === 'object' && !Array.isArray(node.items)) {
+            this.omitMapFields(node.items, `${path}.items`, warnings);
+        }
+
+        // Recurse into anyOf/allOf/oneOf
+        for (const compositionKey of ['anyOf', 'allOf', 'oneOf']) {
+            if (Array.isArray(node[compositionKey])) {
+                for (let i = 0; i < node[compositionKey].length; i++) {
+                    this.omitMapFields(
+                        node[compositionKey][i],
+                        `${path}.${compositionKey}[${i}]`,
+                        warnings
+                    );
+                }
+            }
+        }
     }
 
     private enforceStrictObjects(node: any, warnings: string[]): void {

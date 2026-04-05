@@ -142,6 +142,125 @@ describe('Pydantic Exporter', () => {
         });
     });
 
+    describe('map types', () => {
+        it('exports map with string values as Dict[str, str]', () => {
+            const schema = parse(`metadata: map.required: Metadata
+  - string`);
+            const output = exportPydantic(schema);
+
+            expect(output).toContain('Dict[str, str]');
+            expect(output).toContain('from typing import Dict');
+        });
+
+        it('exports map with float values as Dict[str, float]', () => {
+            const schema = parse(`scores: map.required: Scores
+  - number`);
+            const output = exportPydantic(schema);
+
+            expect(output).toContain('Dict[str, float]');
+        });
+
+        it('exports map with object values as Dict[str, dict]', () => {
+            const schema = parse(`items: map.required: Items
+  - object:`);
+            const output = exportPydantic(schema);
+
+            expect(output).toContain('Dict[str, dict]');
+        });
+
+        it('exports optional map as Optional[Dict[str, str]]', () => {
+            // Construct a schema with an optional map field without description
+            // to trigger the Optional wrapping path
+            const schema = {
+                location: { start: { line: 1, column: 0, offset: 0 }, end: { line: 1, column: 0, offset: 0 } },
+                imports: [],
+                definitions: [],
+                fields: [
+                    {
+                        name: 'metadata',
+                        type: 'map' as const,
+                        description: '',
+                        required: false,
+                        nullable: false,
+                        rawModifiers: {},
+                        modifiers: [],
+                        valueType: 'string',
+                        location: { start: { line: 1, column: 0, offset: 0 }, end: { line: 1, column: 0, offset: 0 } },
+                    }
+                ],
+            } as any;
+            const output = exportPydantic(schema);
+
+            expect(output).toContain('Optional[Dict[str, str]]');
+            expect(output).toContain('from typing import Dict');
+            expect(output).toContain('from typing import Optional');
+        });
+
+        it('exports map defined in $defs as type alias', () => {
+            const schema = parse(`$defs:
+  Config: map: Configuration
+    - string`);
+            const output = exportPydantic(schema);
+
+            expect(output).toContain('Config = Dict[str, str]');
+            expect(output).toContain('from typing import Dict');
+        });
+
+        it('exports map with $ref value as Dict[str, RefClassName]', () => {
+            // Construct schema manually since parser doesn't preserve $ref target in map valueType
+            const schema = {
+                location: { start: { line: 1, column: 0, offset: 0 }, end: { line: 1, column: 0, offset: 0 } },
+                imports: [],
+                definitions: [
+                    {
+                        name: 'Address',
+                        field: {
+                            name: 'Address',
+                            type: 'object' as const,
+                            description: 'Address',
+                            fields: [
+                                { name: 'street', type: 'string' as const, description: '', required: true, nullable: false, rawModifiers: {}, modifiers: [], location: { start: { line: 1, column: 0, offset: 0 }, end: { line: 1, column: 0, offset: 0 } } }
+                            ],
+                            required: false,
+                            nullable: false,
+                            rawModifiers: {},
+                            modifiers: [],
+                            location: { start: { line: 1, column: 0, offset: 0 }, end: { line: 1, column: 0, offset: 0 } },
+                        },
+                        location: { start: { line: 1, column: 0, offset: 0 }, end: { line: 1, column: 0, offset: 0 } },
+                    }
+                ],
+                fields: [
+                    {
+                        name: 'addresses',
+                        type: 'map' as const,
+                        description: 'Addresses',
+                        required: true,
+                        nullable: false,
+                        rawModifiers: {},
+                        modifiers: [],
+                        valueType: {
+                            name: '',
+                            type: 'ref' as const,
+                            ref: '#/$defs/Address',
+                            description: '',
+                            required: false,
+                            nullable: false,
+                            rawModifiers: {},
+                            modifiers: [],
+                            location: { start: { line: 1, column: 0, offset: 0 }, end: { line: 1, column: 0, offset: 0 } },
+                        },
+                        location: { start: { line: 1, column: 0, offset: 0 }, end: { line: 1, column: 0, offset: 0 } },
+                    }
+                ],
+            } as any;
+            const output = exportPydantic(schema);
+
+            expect(output).toContain('Dict[str, Address]');
+            expect(output).toContain('from typing import Dict');
+        });
+    });
+
     describe('references', () => {
         it('exports references', () => {
             const schema = parse(`$defs:

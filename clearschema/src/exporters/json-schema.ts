@@ -5,6 +5,7 @@ import {
     NumberField,
     ObjectField,
     ArrayField,
+    MapField,
     TupleArrayField,
     UnionField,
     RefField,
@@ -84,6 +85,8 @@ export class JsonSchemaExporter implements Exporter<JsonSchema> {
                 return this.exportObject(field, options);
             case 'array':
                 return this.exportArray(field, options);
+            case 'map':
+                return this.exportMap(field, options);
             case 'array.tuple':
                 return this.exportTuple(field, options);
             case 'union':
@@ -227,6 +230,30 @@ export class JsonSchemaExporter implements Exporter<JsonSchema> {
         if (field.minItems !== undefined) result.minItems = field.minItems;
         if (field.maxItems !== undefined) result.maxItems = field.maxItems;
         if (field.uniqueItems !== undefined) result.uniqueItems = field.uniqueItems;
+
+        this.addUniversalModifiers(result, field, includeDefaults);
+
+        return result;
+    }
+
+    private exportMap(field: MapField, options?: JsonSchemaExportOptions): JsonSchemaField {
+        const includeDescriptions = options?.includeDescriptions ?? true;
+        const includeDefaults = options?.includeDefaults ?? true;
+
+        const result: JsonSchemaField = {
+            type: 'object',
+        };
+
+        if (includeDescriptions && field.description) {
+            result.description = field.description;
+        }
+
+        // Export value type as additionalProperties
+        if (typeof field.valueType === 'string') {
+            result.additionalProperties = { type: field.valueType };
+        } else {
+            result.additionalProperties = this.exportField(field.valueType, options);
+        }
 
         this.addUniversalModifiers(result, field, includeDefaults);
 

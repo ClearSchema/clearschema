@@ -14,7 +14,7 @@ export interface ASTNode {
 }
 
 export type PrimitiveType = 'string' | 'number' | 'integer' | 'boolean' | 'null';
-export type ComplexType = 'object' | 'array' | 'array.tuple';
+export type ComplexType = 'object' | 'array' | 'array.tuple' | 'map';
 export type CompositionType = 'allOf' | 'anyOf' | 'oneOf';
 export type FieldTypeName = PrimitiveType | ComplexType | 'union' | 'ref' | CompositionType;
 
@@ -89,6 +89,11 @@ export interface ArrayField extends BaseField {
     uniqueItems?: boolean;
 }
 
+export interface MapField extends BaseField {
+    type: 'map';
+    valueType: Field | FieldTypeName;
+}
+
 export interface TupleArrayField extends BaseField {
     type: 'array.tuple';
     items: Field[];
@@ -117,6 +122,7 @@ export type Field =
     | NullField
     | ObjectField
     | ArrayField
+    | MapField
     | TupleArrayField
     | UnionField
     | RefField

@@ -7,6 +7,7 @@ import {
     NullField,
     ObjectField,
     ArrayField,
+    MapField,
     TupleArrayField,
     UnionField,
     RefField,
@@ -24,7 +25,7 @@ import { ParseError, loc } from './errors';
 import { tokenize, TokenStream, TokenType } from '../lexer/lexer';
 
 const PRIMITIVE_TYPES: PrimitiveType[] = ['string', 'number', 'integer', 'boolean', 'null'];
-const COMPLEX_TYPES: string[] = ['object', 'array', 'array.tuple'];
+const COMPLEX_TYPES: string[] = ['object', 'array', 'array.tuple', 'map'];
 const COMPOSITION_TYPES: CompositionType[] = ['allOf', 'anyOf', 'oneOf'];
 const ALL_TYPES: string[] = [...PRIMITIVE_TYPES, ...COMPLEX_TYPES, ...COMPOSITION_TYPES, '$ref'];
 
@@ -489,6 +490,64 @@ class Parser {
             };
         }
 
+        // Check for inline map: "- map:" or just "- map"
+        if (content === 'map:' || content === 'map') {
+            // Inline map - parse nested array items for value type
+            const mapItems: ArrayItemInfo[] = [];
+
+            if (this.stream.match(TokenType.INDENT)) {
+                this.stream.advance();
+
+                while (!this.stream.match(TokenType.DEDENT) && !this.stream.isAtEnd()) {
+                    if (this.stream.match(TokenType.ARRAY_ITEM)) {
+                        mapItems.push(this.parseArrayItem());
+                    } else {
+                        this.stream.advance();
+                    }
+                }
+
+                if (this.stream.match(TokenType.DEDENT)) {
+                    this.stream.advance();
+                }
+            }
+
+            if (mapItems.length === 0) {
+                throw new ParseError(
+                    'map type requires exactly one child item defining the value type',
+                    location,
+                    this.source,
+                    'Add a child item like: - string'
+                );
+            }
+
+            if (mapItems.length > 1) {
+                throw new ParseError(
+                    `map type accepts exactly one child item defining the value type, but ${mapItems.length} were provided`,
+                    location,
+                    this.source,
+                    'A map can only have one value type'
+                );
+            }
+
+            const inlineMap: MapField = {
+                name: '',
+                type: 'map',
+                description: '',
+                required: false,
+                nullable: false,
+                rawModifiers: {},
+                modifiers: [],
+                valueType: mapItems[0].itemType,
+                location,
+            };
+
+            return {
+                itemType: inlineMap,
+                description: '',
+                location,
+            };
+        }
+
         // Parse: "type: description" or just "type"
         const colonIndex = content.indexOf(':');
         let typeName: string;
@@ -652,6 +711,8 @@ class Parser {
                 return this.buildObjectField(baseProps, rawModifiers, childFields);
             case 'array':
                 return this.buildArrayField(baseProps, rawModifiers, arrayItems);
+            case 'map':
+                return this.buildMapField(baseProps, arrayItems);
             case 'array.tuple':
                 return this.buildTupleArrayField(baseProps, rawModifiers, arrayItems);
             case 'union':
@@ -751,6 +812,35 @@ class Parser {
             minItems: rawModifiers['minItems'] as number | undefined,
             maxItems: rawModifiers['maxItems'] as number | undefined,
             uniqueItems: rawModifiers['uniqueItems'] as boolean | undefined,
+        };
+    }
+
+    private buildMapField(
+        baseProps: Omit<MapField, 'type' | 'valueType'>,
+        arrayItems: ArrayItemInfo[]
+    ): MapField {
+        if (arrayItems.length === 0) {
+            throw new ParseError(
+                'map type requires exactly one child item defining the value type',
+                baseProps.location,
+                this.source,
+                'Add a child item like: - string'
+            );
+        }
+
+        if (arrayItems.length > 1) {
+            throw new ParseError(
+                `map type accepts exactly one child item defining the value type, but ${arrayItems.length} were provided`,
+                baseProps.location,
+                this.source,
+                'A map can only have one value type'
+            );
+        }
+
+        return {
+            ...baseProps,
+            type: 'map',
+            valueType: arrayItems[0].itemType,
         };
     }
 
