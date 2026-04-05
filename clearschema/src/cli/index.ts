@@ -10,10 +10,11 @@ import { exportTypeScript } from '../exporters/typescript';
 import { exportPydantic } from '../exporters/pydantic';
 import { exportOpenAPI } from '../exporters/openapi';
 import { exportLlmSchema } from '../exporters/llm-structured-output';
+import { exportZod } from '../exporters/zod';
 
 interface CliOptions {
     output?: string;
-    format?: 'json-schema' | 'typescript' | 'pydantic' | 'openapi' | 'llm-schema';
+    format?: 'json-schema' | 'typescript' | 'pydantic' | 'openapi' | 'llm-schema' | 'zod';
     schemaVersion?: '2020-12' | '2019-09' | 'draft-07';
     help?: boolean;
     version?: boolean;
@@ -28,7 +29,7 @@ Usage:
 
 Options:
   -o, --output <file>           Output file (default: stdout)
-  -f, --format <format>         Export format: json-schema, typescript, pydantic, openapi, llm-schema (default: json-schema)
+  -f, --format <format>         Export format: json-schema, typescript, pydantic, openapi, llm-schema, zod (default: json-schema)
   --schema-version <version>    JSON Schema version: 2020-12, 2019-09, draft-07 (default: 2020-12)
   -h, --help                    Show this help message
   -v, --version                 Show version number
@@ -40,6 +41,7 @@ Examples:
   clearschema schema.clear -f pydantic -o models.py
   clearschema schema.clear -f openapi -o openapi.json
   clearschema schema.clear -f llm-schema -o llm-output.json
+  clearschema schema.clear -f zod -o validators.ts
   clearschema schema.clear --schema-version draft-07
 `);
 }
@@ -63,10 +65,10 @@ function parseArgs(args: string[]): { inputFile?: string; options: CliOptions } 
             options.output = args[++i];
         } else if (arg === '-f' || arg === '--format') {
             const format = args[++i];
-            if (format === 'json-schema' || format === 'typescript' || format === 'pydantic' || format === 'openapi' || format === 'llm-schema') {
+            if (format === 'json-schema' || format === 'typescript' || format === 'pydantic' || format === 'openapi' || format === 'llm-schema' || format === 'zod') {
                 options.format = format;
             } else {
-                console.error(`Error: Invalid format "${format}". Must be: json-schema, typescript, pydantic, openapi, llm-schema`);
+                console.error(`Error: Invalid format "${format}". Must be: json-schema, typescript, pydantic, openapi, llm-schema, zod`);
                 process.exit(1);
             }
         } else if (arg === '--schema-version') {
@@ -155,6 +157,8 @@ function main(): void {
             version: '1.0.0',
         });
         output = JSON.stringify(openapi, null, 2);
+    } else if (format === 'zod') {
+        output = exportZod(schema);
     } else if (format === 'llm-schema') {
         try {
             const result = exportLlmSchema(schema);

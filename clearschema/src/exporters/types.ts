@@ -24,6 +24,10 @@ export interface PydanticExportOptions extends ExportOptions {
     useTyping?: boolean;
 }
 
+export interface ZodExportOptions extends ExportOptions {
+    includeDescriptions?: boolean;
+}
+
 export interface OpenAPIExportOptions extends ExportOptions {
     title?: string;
     version?: string;
