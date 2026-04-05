@@ -4,6 +4,7 @@ import { exportTypeScript } from '../../src/exporters/typescript';
 import { exportPydantic } from '../../src/exporters/pydantic';
 import { exportOpenAPI } from '../../src/exporters/openapi';
 import { exportLlmSchema } from '../../src/exporters/llm-structured-output';
+import { exportZod } from '../../src/exporters/zod';
 import { ObjectField, ArrayField, StringField, NumberField, TupleArrayField, MapField } from '../../src/ast/types';
 
 describe('Integration Tests - Complex Schemas', () => {
@@ -341,6 +342,16 @@ user: object.required: User profile
             expect(rootSchema.properties.service.properties.metadata.additionalProperties).toEqual({ type: 'string' });
         });
 
+        it('exports correct Zod for maps', () => {
+            const schema = parse(input);
+            const zod = exportZod(schema);
+
+            expect(zod).toContain("import { z } from 'zod';");
+            expect(zod).toContain('z.record(z.string(), z.string())');
+            // Nullable map
+            expect(zod).toContain('.nullable()');
+        });
+
         it('exports LLM schema with map fields omitted', () => {
             const schema = parse(input);
             const result = exportLlmSchema(schema);
@@ -357,6 +368,80 @@ user: object.required: User profile
             expect(serviceProps.tags).toBeUndefined();
             // Warnings should be present
             expect(result.warnings.length).toBeGreaterThan(0);
+        });
+    });
+
+    describe('Zod Exporter Integration', () => {
+        it('exports realistic multi-type schema', () => {
+            const input = `$defs:
+  Address: object: Address
+    street: string.required: Street address
+    city: string.required: City
+    country: string.required: Country
+      ^ enum: [US, CA, UK]
+
+user: object.required: User profile
+  id: string.required: User ID
+    ^ format: uuid
+  name: string.required: Full name
+    ^ minLength: 1
+    ^ maxLength: 100
+  email: string.required: Email
+    ^ format: email
+  age: integer: Age
+    ^ min: 0
+    ^ max: 150
+  tags: array: Tags
+    - string
+  address: $ref: #/$defs/Address
+  status: string.required: Status
+    ^ enum: [active, inactive]
+    ^ default: active`;
+
+            const schema = parse(input);
+            const output = exportZod(schema);
+
+            // Import
+            expect(output).toContain("import { z } from 'zod';");
+
+            // Definition
+            expect(output).toContain('export const AddressSchema = z.object(');
+            expect(output).toContain('z.enum(["US", "CA", "UK"])');
+
+            // Root schema
+            expect(output).toContain('export const Schema = z.object(');
+
+            // Field types
+            expect(output).toContain('z.string().uuid()');
+            expect(output).toContain('z.string().min(1).max(100)');
+            expect(output).toContain('z.string().email()');
+            expect(output).toContain('z.number().int().min(0).max(150)');
+            expect(output).toContain('z.array(z.string())');
+            expect(output).toContain('AddressSchema');
+            expect(output).toContain('z.enum(["active", "inactive"])');
+            expect(output).toContain('.default("active")');
+        });
+
+        it('exports schema with $defs and cross-references', () => {
+            const input = `$defs:
+  PhoneNumber: object: Phone number
+    countryCode: string.required: Country code
+    number: string.required: Number
+  ContactInfo: object: Contact info
+    email: string.required: Email
+      ^ format: email
+    phones: array: Phone numbers
+      - $ref: #/$defs/PhoneNumber
+
+contact: $ref: #/$defs/ContactInfo`;
+
+            const schema = parse(input);
+            const output = exportZod(schema);
+
+            expect(output).toContain('export const PhoneNumberSchema = z.object(');
+            expect(output).toContain('export const ContactInfoSchema = z.object(');
+            expect(output).toContain('PhoneNumberSchema');
+            expect(output).toContain('ContactInfoSchema');
         });
     });
 

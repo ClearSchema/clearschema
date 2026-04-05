@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-04-05
+
+### Added
+
+- **Zod Runtime Validator Exporter**
+  - New `-f zod` export format producing Zod v3 schema code
+  - Full AST type coverage: primitives, objects, arrays, tuples, maps, unions, refs, composition types (allOf/anyOf/oneOf)
+  - Modifier-to-Zod constraint mapping: string (min/max/regex/email/url/uuid/datetime), number (min/max/gt/lt/multipleOf), integer (.int()), array (min/max), nullable, optional, default, const, enum, description
+  - `$defs` as named `export const` with `Schema` suffix (e.g., `export const UserSchema = z.object({...})`)
+  - Root fields wrapped in `export const Schema = z.object({...})`
+  - Available via CLI (`-f zod`) and programmatically (`exportZod()`, `ZodExporter`)
+  - 57 unit tests + 3 integration tests
+
 ## [0.3.0] - 2026-04-04
 
 ### Added

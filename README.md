@@ -27,7 +27,7 @@ age: integer: Age in years
   ^ max: 150
 ```
 
-**Exports to JSON Schema, TypeScript, and more.**
+**Exports to JSON Schema, TypeScript, Zod, and more.**
 
 <details>
 <summary>JSON Schema Output (click to expand)</summary>
@@ -75,6 +75,20 @@ export interface Schema {
 ```
 </details>
 
+<details>
+<summary>Zod Output</summary>
+
+```typescript
+import { z } from 'zod';
+
+export const Schema = z.object({
+  name: z.string().min(2).max(128).describe("User's full name"),
+  email: z.string().email().describe("Email address"),
+  age: z.number().int().min(0).max(150).optional().describe("Age in years"),
+});
+```
+</details>
+
 ---
 
 ## Installation
@@ -95,6 +109,9 @@ clearschema schema.clear -f typescript -o types.ts
 # Export to Pydantic (Python)
 clearschema schema.clear -f pydantic -o models.py
 
+# Export to Zod validators
+clearschema schema.clear -f zod -o validators.ts
+
 # Export to OpenAPI 3.1
 clearschema schema.clear -f openapi -o openapi.json
 
@@ -111,6 +128,7 @@ import {
   exportTypeScript,
   exportPydantic,
   exportOpenAPI,
+  exportZod,
   resolveReferences,
   resolveImports
 } from '@clearschema/core';
@@ -125,6 +143,7 @@ const jsonSchema = exportJsonSchema(schema);
 const typescript = exportTypeScript(schema);
 const pydantic = exportPydantic(schema);
 const openapi = exportOpenAPI(schema, { title: 'My API', version: '1.0.0' });
+const zod = exportZod(schema);
 
 // Resolve references
 const resolved = resolveReferences(schema);
@@ -180,6 +199,14 @@ Generate Pydantic model classes for Python services. Share the same schema sourc
 
 ```bash
 clearschema models.clear -f pydantic -o models.py
+```
+
+### Zod Runtime Validators
+
+Generate Zod schemas for runtime validation that pair with your TypeScript types. One `.clear` file gives you both static types and runtime validation from a single source of truth.
+
+```bash
+clearschema models.clear -f zod -o validators.ts
 ```
 
 ### LLM Structured Output
