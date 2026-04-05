@@ -51,7 +51,7 @@ describe('Integration Tests - Import Round-trip', () => {
             expect(originalAst.errors).toBeUndefined();
 
             const jsonSchema = exportJsonSchema(originalAst);
-            const { schema: importedAst, warnings } = importJsonSchema(jsonSchema);
+            const { schema: importedAst } = importJsonSchema(jsonSchema);
 
             const strippedOriginal = stripLocationsAndModifiers(originalAst);
             const strippedImported = stripLocationsAndModifiers(importedAst);
@@ -66,7 +66,7 @@ describe('Integration Tests - Import Round-trip', () => {
             expect(originalAst.errors).toBeUndefined();
 
             const jsonSchema = exportJsonSchema(originalAst);
-            const { schema: importedAst, warnings } = importJsonSchema(jsonSchema);
+            const { schema: importedAst } = importJsonSchema(jsonSchema);
 
             // Definitions should round-trip (same count and same names)
             expect(importedAst.definitions.length).toBe(originalAst.definitions.length);
@@ -105,7 +105,7 @@ describe('Integration Tests - Import Round-trip', () => {
             expect(originalAst.errors).toBeUndefined();
 
             const jsonSchema = exportJsonSchema(originalAst);
-            const { schema: importedAst, warnings } = importJsonSchema(jsonSchema);
+            const { schema: importedAst } = importJsonSchema(jsonSchema);
 
             const strippedOriginal = stripLocationsAndModifiers(originalAst);
             const strippedImported = stripLocationsAndModifiers(importedAst);
@@ -214,7 +214,7 @@ describe('Integration Tests - Import Round-trip', () => {
                 required: ['location'],
             };
 
-            const { schema, warnings } = importJsonSchema(draft07Schema);
+            const { schema } = importJsonSchema(draft07Schema);
 
             // definitions should be normalized into schema.definitions
             expect(schema.definitions.length).toBe(1);
