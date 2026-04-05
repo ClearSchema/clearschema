@@ -1,15 +1,11 @@
 import { StreamLanguage, StringStream } from '@codemirror/language';
 
-interface ClearSchemaState {
-  inString: boolean;
-}
-
 const clearschemaMode = {
-  startState(): ClearSchemaState {
-    return { inString: false };
+  startState() {
+    return {};
   },
 
-  token(stream: StringStream, _state: ClearSchemaState): string | null {
+  token(stream: StringStream): string | null {
     // Skip whitespace
     if (stream.eatSpace()) return null;
 

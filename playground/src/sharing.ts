@@ -1,6 +1,14 @@
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string';
 import type { Format } from './output';
 
+const VALID_FORMATS: readonly string[] = [
+  'json-schema', 'typescript', 'pydantic', 'openapi', 'llm-schema',
+];
+
+function isValidFormat(value: string): value is Format {
+  return VALID_FORMATS.includes(value);
+}
+
 interface PlaygroundState {
   code: string;
   format: Format;
@@ -18,9 +26,10 @@ export function decodeState(): PlaygroundState | null {
   try {
     const json = decompressFromEncodedURIComponent(hash);
     if (!json) return null;
-    const state = JSON.parse(json) as PlaygroundState;
+    const state = JSON.parse(json) as Record<string, unknown>;
     if (typeof state.code !== 'string' || typeof state.format !== 'string') return null;
-    return state;
+    if (!isValidFormat(state.format)) return null;
+    return { code: state.code, format: state.format };
   } catch {
     return null;
   }

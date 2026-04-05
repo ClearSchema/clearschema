@@ -14,7 +14,7 @@ import type { Schema } from '@clearschema/core';
 
 export type Format = 'json-schema' | 'typescript' | 'pydantic' | 'openapi' | 'llm-schema';
 
-export const FORMAT_LABELS: Record<Format, string> = {
+const FORMAT_LABELS: Record<Format, string> = {
   'json-schema': 'JSON Schema',
   typescript: 'TypeScript',
   pydantic: 'Pydantic',
@@ -34,6 +34,8 @@ function languageForFormat(format: Format) {
       return javascript({ typescript: true });
     case 'pydantic':
       return python();
+    default:
+      return json();
   }
 }
 

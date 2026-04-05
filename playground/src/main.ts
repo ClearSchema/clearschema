@@ -37,6 +37,8 @@ function showErrors(errors: Array<{ line: number; column: number; message: strin
 }
 
 function showWarnings(warnings: string[]) {
+  // Remove previous warnings (keep error items)
+  errorPanel.querySelectorAll('.warning-item').forEach((el) => el.remove());
   for (const w of warnings) {
     const div = document.createElement('div');
     div.className = 'warning-item';
@@ -81,6 +83,8 @@ function compile(content: string) {
       }]);
     } else if (err instanceof Error) {
       showErrors([{ line: 1, column: 1, message: err.message }]);
+    } else {
+      showErrors([{ line: 1, column: 1, message: String(err) }]);
     }
   }
 }
