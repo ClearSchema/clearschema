@@ -12,11 +12,7 @@ import {
     CompositionField,
     FieldTypeName,
 } from '../ast/types';
-import { Exporter, ExportOptions } from './types';
-
-export interface ZodExportOptions extends ExportOptions {
-    includeDescriptions?: boolean;
-}
+import { Exporter, ZodExportOptions } from './types';
 
 export class ZodExporter implements Exporter<string> {
     private indent = '  ';
@@ -163,7 +159,8 @@ export class ZodExporter implements Exporter<string> {
         }
 
         if (field.pattern !== undefined) {
-            result += `.regex(/${field.pattern}/)`;
+            const escaped = field.pattern.replace(/\//g, '\\/');
+            result += `.regex(/${escaped}/)`;
         }
 
         return result;

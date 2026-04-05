@@ -99,6 +99,30 @@ describe('Zod Exporter', () => {
             expect(output).toContain('z.string().datetime()');
         });
 
+        it('exports pattern with forward slashes escaped', () => {
+            const loc = { start: { line: 1, column: 1, offset: 0 }, end: { line: 1, column: 1, offset: 0 } };
+            const schema: Schema = {
+                location: loc,
+                imports: [],
+                definitions: [],
+                fields: [{
+                    name: 'url',
+                    type: 'string',
+                    description: '',
+                    required: true,
+                    nullable: false,
+                    rawModifiers: {},
+                    modifiers: [],
+                    location: loc,
+                    pattern: '^https?://[^/]+$',
+                } as any],
+            };
+            const output = exportZod(schema);
+
+            expect(output).toContain('.regex(/^https?:\\/\\/[^\\/]+$/)');
+            expect(output).not.toContain('.regex(/^https?://');
+        });
+
         it('falls back to plain z.string() for unsupported format', () => {
             const schema = parse(`host: string: Host
   ^ format: hostname`);
