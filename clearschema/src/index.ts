@@ -31,6 +31,13 @@ export type {
     ZodExportOptions,
 } from './exporters/types';
 
+// ClearSchema serializer
+export { exportClearSchema, ClearSchemaSerializer } from './exporters/clearschema';
+
+// Importers
+export { importJsonSchema, JsonSchemaImporter } from './importers/json-schema';
+export type { ImportResult, JsonSchemaImportOptions } from './importers/json-schema';
+
 // Resolvers
 export { resolveImports, resolveReferences } from './resolver/resolver';
 export type { ResolverOptions, ResolvedSchema } from './resolver/resolver';

@@ -11,6 +11,8 @@ import { exportPydantic } from '../exporters/pydantic';
 import { exportOpenAPI } from '../exporters/openapi';
 import { exportLlmSchema } from '../exporters/llm-structured-output';
 import { exportZod } from '../exporters/zod';
+import { importJsonSchema } from '../importers/json-schema';
+import { exportClearSchema } from '../exporters/clearschema';
 
 interface CliOptions {
     output?: string;
@@ -26,6 +28,10 @@ ClearSchema CLI v${pkg.version}
 
 Usage:
   clearschema <input-file> [options]
+  clearschema import <json-schema-file> [options]
+
+Subcommands:
+  import    Import a JSON Schema file and convert to ClearSchema or re-export
 
 Options:
   -o, --output <file>           Output file (default: stdout)
@@ -91,12 +97,161 @@ function parseArgs(args: string[]): { inputFile?: string; options: CliOptions } 
     return { inputFile, options };
 }
 
+type ImportFormat = 'clear' | 'json-schema' | 'typescript' | 'pydantic' | 'openapi' | 'llm-schema' | 'zod';
+
+function printImportHelp(): void {
+    console.log(`
+ClearSchema CLI v${pkg.version} — import subcommand
+
+Usage:
+  clearschema import <json-schema-file> [options]
+
+Description:
+  Import a JSON Schema file and convert it to ClearSchema DSL or
+  re-export it to any supported format.
+
+Options:
+  -o, --output <file>    Output file (default: stdout)
+  -f, --format <format>  Output format: clear, json-schema, typescript,
+                         pydantic, openapi, llm-schema, zod (default: clear)
+  -h, --help             Show this help message
+
+Examples:
+  clearschema import schema.json
+  clearschema import schema.json -o schema.clear
+  clearschema import schema.json -f typescript -o types.ts
+  clearschema import schema.json -f json-schema -o out.json
+`);
+}
+
+function handleImport(args: string[]): void {
+    let inputFile: string | undefined;
+    let output: string | undefined;
+    let format: ImportFormat = 'clear';
+    let help = false;
+
+    for (let i = 0; i < args.length; i++) {
+        const arg = args[i];
+
+        if (arg === '-h' || arg === '--help') {
+            help = true;
+        } else if (arg === '-o' || arg === '--output') {
+            output = args[++i];
+        } else if (arg === '-f' || arg === '--format') {
+            const fmt = args[++i];
+            const validFormats: ImportFormat[] = ['clear', 'json-schema', 'typescript', 'pydantic', 'openapi', 'llm-schema', 'zod'];
+            if (validFormats.includes(fmt as ImportFormat)) {
+                format = fmt as ImportFormat;
+            } else {
+                console.error(`Error: Invalid format "${fmt}". Must be: ${validFormats.join(', ')}`);
+                process.exit(1);
+            }
+        } else if (!arg.startsWith('-')) {
+            inputFile = arg;
+        } else {
+            console.error(`Error: Unknown option "${arg}"`);
+            printImportHelp();
+            process.exit(1);
+        }
+    }
+
+    if (help) {
+        printImportHelp();
+        process.exit(0);
+    }
+
+    if (!inputFile) {
+        console.error('Error: No input file specified');
+        printImportHelp();
+        process.exit(1);
+    }
+
+    if (!fs.existsSync(inputFile)) {
+        console.error(`Error: Input file "${inputFile}" not found`);
+        process.exit(1);
+    }
+
+    let rawContent: string;
+    try {
+        rawContent = fs.readFileSync(inputFile, 'utf-8');
+    } catch (err) {
+        console.error(`Error: Could not read file "${inputFile}": ${err instanceof Error ? err.message : String(err)}`);
+        process.exit(1);
+    }
+
+    let jsonData: any;
+    try {
+        jsonData = JSON.parse(rawContent);
+    } catch (err) {
+        console.error(`Error: Invalid JSON in "${inputFile}": ${err instanceof Error ? err.message : String(err)}`);
+        process.exit(1);
+    }
+
+    const { schema, warnings } = importJsonSchema(jsonData);
+
+    // Print warnings to stderr
+    for (const warning of warnings) {
+        console.error(`Warning: ${warning}`);
+    }
+
+    // Export based on format
+    let result: string;
+
+    if (format === 'clear') {
+        result = exportClearSchema(schema);
+    } else if (format === 'json-schema') {
+        const jsonSchema = exportJsonSchema(schema);
+        result = JSON.stringify(jsonSchema, null, 2);
+    } else if (format === 'typescript') {
+        result = exportTypeScript(schema);
+    } else if (format === 'pydantic') {
+        result = exportPydantic(schema);
+    } else if (format === 'openapi') {
+        const openapi = exportOpenAPI(schema, {
+            title: 'Generated API',
+            version: '1.0.0',
+        });
+        result = JSON.stringify(openapi, null, 2);
+    } else if (format === 'zod') {
+        result = exportZod(schema);
+    } else if (format === 'llm-schema') {
+        try {
+            const llmResult = exportLlmSchema(schema);
+            result = JSON.stringify(llmResult.schema, null, 2);
+            if (llmResult.warnings.length > 0) {
+                for (const w of llmResult.warnings) {
+                    console.error(`Warning: ${w}`);
+                }
+            }
+        } catch (err) {
+            console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+            process.exit(1);
+        }
+    } else {
+        console.error(`Error: Unknown format "${format}"`);
+        process.exit(1);
+    }
+
+    if (output) {
+        fs.writeFileSync(output, result!, 'utf-8');
+        console.log(`✓ Imported and exported to ${output}`);
+    } else {
+        console.log(result!);
+    }
+}
+
 function main(): void {
     const args = process.argv.slice(2);
 
     if (args.length === 0) {
         printHelp();
         process.exit(0);
+    }
+
+    // Intercept 'import' subcommand before parseArgs
+    if (args[0] === 'import') {
+        handleImport(args.slice(1));
+        return;
     }
 
     const { inputFile, options } = parseArgs(args);
@@ -191,4 +346,4 @@ if (require.main === module) {
     main();
 }
 
-export { main };
+export { main, handleImport };
