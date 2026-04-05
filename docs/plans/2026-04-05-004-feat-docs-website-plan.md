@@ -1,7 +1,7 @@
 ---
 title: "feat: Add VitePress documentation website with embedded playground"
 type: feat
-status: active
+status: completed
 date: 2026-04-05
 origin: docs/brainstorms/2026-04-05-docs-website-requirements.md
 deepened: 2026-04-05
