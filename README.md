@@ -117,6 +117,12 @@ clearschema schema.clear -f openapi -o openapi.json
 
 # Use different JSON Schema version
 clearschema schema.clear --schema-version draft-07 -o schema.json
+
+# Import existing JSON Schema to .clear
+clearschema import schema.json -o schema.clear
+
+# Import JSON Schema and re-export to another format
+clearschema import schema.json -f typescript -o types.ts
 ```
 
 ### API Usage
@@ -129,6 +135,8 @@ import {
   exportPydantic,
   exportOpenAPI,
   exportZod,
+  exportClearSchema,
+  importJsonSchema,
   resolveReferences,
   resolveImports
 } from '@clearschema/core';
@@ -144,6 +152,10 @@ const typescript = exportTypeScript(schema);
 const pydantic = exportPydantic(schema);
 const openapi = exportOpenAPI(schema, { title: 'My API', version: '1.0.0' });
 const zod = exportZod(schema);
+
+// Import from JSON Schema
+const { schema: imported, warnings } = importJsonSchema(jsonSchemaObj);
+const clearText = exportClearSchema(imported);
 
 // Resolve references
 const resolved = resolveReferences(schema);
@@ -207,6 +219,14 @@ Generate Zod schemas for runtime validation that pair with your TypeScript types
 
 ```bash
 clearschema models.clear -f zod -o validators.ts
+```
+
+### Import Existing JSON Schema
+
+Migrate existing JSON Schema files to ClearSchema with one command. Supports Draft 2020-12, 2019-09, and Draft-07.
+
+```bash
+clearschema import existing-schema.json -o schema.clear
 ```
 
 ### LLM Structured Output
@@ -325,8 +345,8 @@ $defs:
 | 7. VS Code Extension | ✅ Complete | v0.2.0 |
 | 8. Documentation | ✅ Complete | v0.2.0 |
 
-**Current Version:** 0.2.0
-**Test Coverage:** 93%+ (232 tests passing)
+**Current Version:** 0.5.0
+**Test Coverage:** 93%+ (465 tests passing)
 **License:** MIT
 
 ---

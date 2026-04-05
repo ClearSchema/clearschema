@@ -19,6 +19,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - VS Code extension upgraded with LSP client (spawns server via IPC)
   - 91 tests (70 unit + 21 integration)
 
+## [0.5.0] - 2026-04-05
+
+### Added
+
+- **JSON Schema Reverse Importer**
+  - New `clearschema import` CLI subcommand for importing JSON Schema files
+  - Supports JSON Schema Draft 2020-12, 2019-09, and Draft-07
+  - Full type coverage: primitives, objects, arrays, tuples, maps, unions, refs, composition types
+  - Disambiguation heuristics for `anyOf` (nullable vs union vs composition) and object/map detection
+  - Draft auto-detection from `$schema` URI with fallback heuristic
+  - `#/definitions/X` (Draft-07) automatically normalized to `#/$defs/X`
+  - Warnings for unsupported keywords (`patternProperties`, `if/then/else`, `dependentSchemas`, `not`)
+  - Available via CLI (`clearschema import schema.json`) and programmatically (`importJsonSchema()`)
+  - Re-export to any format: `clearschema import schema.json -f typescript -o types.ts`
+
+- **ClearSchema DSL Serializer**
+  - New `exportClearSchema()` exporter that serializes AST back to `.clear` DSL text
+  - Full round-trip support: JSON Schema -> AST -> `.clear` -> parse -> equivalent AST
+  - Idiomatic output matching hand-written `.clear` style
+
+### Test Coverage
+
+- 465 tests passing across 23 test suites
+- 6 integration round-trip tests using real example schemas
+
 ## [0.4.0] - 2026-04-05
 
 ### Added
