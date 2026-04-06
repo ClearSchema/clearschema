@@ -134,6 +134,9 @@ describe('Parser - Array Fields', () => {
         it('rejects exclusiveRange on array (number/integer only)', () => {
             const input = `tags: array: Tags\n  - string\n  ^ exclusiveRange: [0, 10]`;
             expect(() => parseField(input)).toThrow();
+            try { parseField(input); } catch (e: any) {
+                expect(e.message).toContain('"exclusiveRange" is only valid on number/integer');
+            }
         });
     });
 

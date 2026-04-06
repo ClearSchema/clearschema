@@ -533,6 +533,14 @@ age: number: Age`;
             }
         });
 
+        it('rejects range with non-numeric values', () => {
+            const input = `name: string: Name\n  ^ range: ["abc", "def"]`;
+            expect(() => parseField(input)).toThrow(ParseError);
+            try { parseField(input); } catch (e) {
+                expect((e as ParseError).message).toContain('range values must be finite numbers');
+            }
+        });
+
         it('rejects range + min conflict on same field', () => {
             const input = `name: string: Name\n  ^ range: [1, 10]\n  ^ min: 5`;
             expect(() => parseField(input)).toThrow(ParseError);

@@ -1020,7 +1020,17 @@ class Parser {
             );
         }
 
-        const [min, max] = range as [number, number];
+        const [min, max] = range;
+
+        // Validate both values are finite numbers
+        if (typeof min !== 'number' || typeof max !== 'number' || !Number.isFinite(min) || !Number.isFinite(max)) {
+            throw new ParseError(
+                'range values must be finite numbers',
+                baseProps.location,
+                this.source,
+                'Expected format: ^ range: [min, max] where min and max are numbers'
+            );
+        }
 
         // Validate min <= max
         if (min > max) {
@@ -1069,7 +1079,17 @@ class Parser {
             );
         }
 
-        const [min, max] = range as [number, number];
+        const [min, max] = range;
+
+        // Validate both values are finite numbers
+        if (typeof min !== 'number' || typeof max !== 'number' || !Number.isFinite(min) || !Number.isFinite(max)) {
+            throw new ParseError(
+                'exclusiveRange values must be finite numbers',
+                baseProps.location,
+                this.source,
+                'Expected format: ^ exclusiveRange: [min, max] where min and max are numbers'
+            );
+        }
 
         // Validate min <= max
         if (min > max) {
