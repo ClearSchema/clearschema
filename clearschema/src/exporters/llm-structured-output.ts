@@ -61,8 +61,12 @@ export class LlmSchemaExporter implements Exporter<LlmSchemaResult> {
         // Set additionalProperties: false on all objects and ensure all props in required
         this.enforceStrictObjects(result, warnings);
 
-        // Strip unsupported keywords
-        this.stripUnsupportedKeywords(result, '', warnings);
+        // Convert discriminated union oneOf → anyOf and collect discriminator const paths
+        const discriminatorPaths = new Set<string>();
+        this.convertDiscriminatedUnions(result, '', discriminatorPaths);
+
+        // Strip unsupported keywords (preserves discriminator const via path set)
+        this.stripUnsupportedKeywords(result, '', warnings, discriminatorPaths);
 
         // Validate nesting depth
         const depth = this.measureObjectDepth(result, 0);
@@ -253,20 +257,24 @@ export class LlmSchemaExporter implements Exporter<LlmSchemaResult> {
         }
     }
 
-    private stripUnsupportedKeywords(node: any, path: string, warnings: string[]): void {
+    private stripUnsupportedKeywords(node: any, path: string, warnings: string[], discriminatorPaths: Set<string>): void {
         if (node === null || node === undefined || typeof node !== 'object') {
             return;
         }
 
         if (Array.isArray(node)) {
             for (let i = 0; i < node.length; i++) {
-                this.stripUnsupportedKeywords(node[i], `${path}[${i}]`, warnings);
+                this.stripUnsupportedKeywords(node[i], `${path}[${i}]`, warnings, discriminatorPaths);
             }
             return;
         }
 
         for (const keyword of UNSUPPORTED_KEYWORDS) {
             if (keyword in node) {
+                // Preserve const on discriminator properties tracked by path
+                if (keyword === 'const' && discriminatorPaths.has(path)) {
+                    continue;
+                }
                 const fieldPath = path || 'root';
                 warnings.push(`Dropped '${keyword}' constraint from ${fieldPath}`);
                 delete node[keyword];
@@ -276,8 +284,86 @@ export class LlmSchemaExporter implements Exporter<LlmSchemaResult> {
         // Recurse
         for (const key of Object.keys(node)) {
             const childPath = path ? `${path}.${key}` : key;
-            this.stripUnsupportedKeywords(node[key], childPath, warnings);
+            this.stripUnsupportedKeywords(node[key], childPath, warnings, discriminatorPaths);
         }
+    }
+
+    /**
+     * Detect discriminated unions (oneOf where variants share a property with const values)
+     * and convert them to anyOf. Collect discriminator const property paths into the provided Set.
+     */
+    private convertDiscriminatedUnions(node: any, path: string, discriminatorPaths: Set<string>): void {
+        if (node === null || node === undefined || typeof node !== 'object') {
+            return;
+        }
+
+        if (Array.isArray(node)) {
+            for (let i = 0; i < node.length; i++) {
+                this.convertDiscriminatedUnions(node[i], `${path}[${i}]`, discriminatorPaths);
+            }
+            return;
+        }
+
+        // Check if this node has a oneOf that looks like a discriminated union
+        if (Array.isArray(node.oneOf) && node.oneOf.length >= 2) {
+            const discriminator = this.findDiscriminatorProperty(node.oneOf);
+            if (discriminator) {
+                // Convert oneOf to anyOf
+                node.anyOf = node.oneOf;
+                delete node.oneOf;
+
+                // Record discriminator const property paths so they survive stripping
+                for (let i = 0; i < node.anyOf.length; i++) {
+                    const variant = node.anyOf[i];
+                    if (variant.properties && variant.properties[discriminator]) {
+                        const discProp = variant.properties[discriminator];
+                        if (discProp.const !== undefined) {
+                            const discPath = path
+                                ? `${path}.anyOf[${i}].properties.${discriminator}`
+                                : `anyOf[${i}].properties.${discriminator}`;
+                            discriminatorPaths.add(discPath);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Recurse into all values
+        for (const key of Object.keys(node)) {
+            const childPath = path ? `${path}.${key}` : key;
+            this.convertDiscriminatedUnions(node[key], childPath, discriminatorPaths);
+        }
+    }
+
+    /**
+     * Find a shared property name across all variants that uses const values (discriminator).
+     * Returns the property name if found, null otherwise.
+     */
+    private findDiscriminatorProperty(variants: any[]): string | null {
+        // All variants must be objects with properties
+        if (!variants.every((v) => v.properties && typeof v.properties === 'object')) {
+            return null;
+        }
+
+        // Find property names that exist in ALL variants and have const in ALL
+        const firstProps = Object.keys(variants[0].properties);
+        for (const propName of firstProps) {
+            const prop = variants[0].properties[propName];
+            if (prop && prop.const !== undefined) {
+                const allHaveConst = variants.every(
+                    (v) => v.properties[propName] && v.properties[propName].const !== undefined
+                );
+                if (allHaveConst) {
+                    // Verify all const values are distinct
+                    const constValues = variants.map((v) => v.properties[propName].const);
+                    if (new Set(constValues).size === constValues.length) {
+                        return propName;
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 
     private measureObjectDepth(node: any, currentLevel: number): number {

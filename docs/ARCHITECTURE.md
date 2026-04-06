@@ -24,7 +24,7 @@ ClearSchema is a **human-readable schema definition language** that serves as a 
 
 - IDE/LSP integration (Phase 7)
 - Multi-language parser implementations (future consideration)
-- Conditional schemas (if/then/else)
+- ~~Conditional schemas (if/then/else)~~ — addressed by `match` (discriminated unions)
 
 ---
 
@@ -123,6 +123,7 @@ user: object: User profile
 | `allOf` | Must match ALL schemas |
 | `anyOf` | Must match AT LEAST ONE schema |
 | `oneOf` | Must match EXACTLY ONE schema |
+| `match` | Discriminated union on a property value |
 
 ---
 

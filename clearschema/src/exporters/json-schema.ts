@@ -10,6 +10,7 @@ import {
     UnionField,
     RefField,
     CompositionField,
+    MatchField,
 } from '../ast/types';
 import { Exporter, JsonSchema, JsonSchemaField, JsonSchemaExportOptions } from './types';
 
@@ -97,6 +98,8 @@ export class JsonSchemaExporter implements Exporter<JsonSchema> {
             case 'anyOf':
             case 'oneOf':
                 return this.exportComposition(field, options);
+            case 'match':
+                return this.exportMatch(field, options);
             default:
                 return { type: 'object' };
         }
@@ -328,6 +331,51 @@ export class JsonSchemaExporter implements Exporter<JsonSchema> {
         }
 
         result[field.type] = schemas;
+
+        this.addUniversalModifiers(result, field, includeDefaults);
+
+        return result;
+    }
+
+    private exportMatch(field: MatchField, options?: JsonSchemaExportOptions): JsonSchemaField {
+        const includeDescriptions = options?.includeDescriptions ?? true;
+        const includeDefaults = options?.includeDefaults ?? true;
+
+        const result: JsonSchemaField = {};
+
+        if (includeDescriptions && field.description) {
+            result.description = field.description;
+        }
+
+        const schemas: JsonSchemaField[] = [];
+        for (const [variantKey, variant] of Object.entries(field.variants)) {
+            if (variant.type === 'ref') {
+                // Wrap $ref with allOf to inject discriminator const
+                schemas.push({
+                    allOf: [
+                        this.exportRef(variant, options),
+                        {
+                            properties: {
+                                [field.discriminator]: { const: variantKey },
+                            },
+                            required: [field.discriminator],
+                        },
+                    ],
+                });
+            } else {
+                // Inline ObjectField variant: export as object and inject discriminator
+                const exported = this.exportObject(variant, options);
+                exported.properties = exported.properties ?? {};
+                exported.properties[field.discriminator] = { const: variantKey };
+                exported.required = exported.required ?? [];
+                if (!exported.required.includes(field.discriminator)) {
+                    exported.required.push(field.discriminator);
+                }
+                schemas.push(exported);
+            }
+        }
+
+        result.oneOf = schemas;
 
         this.addUniversalModifiers(result, field, includeDefaults);
 

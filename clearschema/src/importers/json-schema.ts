@@ -13,6 +13,7 @@ import {
     UnionField,
     RefField,
     CompositionField,
+    MatchField,
     SchemaDefinition,
     SourceLocation,
     Modifier,
@@ -209,6 +210,17 @@ export class JsonSchemaImporter {
             return this.importComposition(name, obj, 'allOf');
         }
         if (Array.isArray(obj.oneOf)) {
+            // Tier 1: Explicit OpenAPI discriminator annotation
+            if (obj.discriminator?.propertyName) {
+                return this.importDiscriminatedUnion(name, obj, obj.discriminator.propertyName);
+            }
+
+            // Tier 2: All variants share a property with a const value
+            const sharedProp = this.findSharedConstProperty(obj.oneOf);
+            if (sharedProp) {
+                return this.importDiscriminatedUnion(name, obj, sharedProp);
+            }
+
             return this.importComposition(name, obj, 'oneOf');
         }
 
@@ -524,6 +536,107 @@ export class JsonSchemaImporter {
             schemas,
             ...this.universalModifiers(obj),
         };
+    }
+
+    // -----------------------------------------------------------------------
+    // Discriminated union (match)
+    // -----------------------------------------------------------------------
+
+    private findSharedConstProperty(variants: any[]): string | null {
+        if (variants.length === 0) return null;
+
+        // Filter to inline variants (skip $ref variants)
+        const inlineVariants = variants.filter(
+            (v: any) =>
+                v != null &&
+                typeof v === 'object' &&
+                v.$ref === undefined &&
+                v.properties != null &&
+                typeof v.properties === 'object',
+        );
+
+        // Need at least one inline variant to detect a discriminator
+        if (inlineVariants.length === 0) return null;
+
+        // Find a property name present in ALL inline variants with a const value
+        const firstProps = Object.keys(inlineVariants[0].properties);
+        for (const propName of firstProps) {
+            const propSchema = inlineVariants[0].properties[propName];
+            const hasConst =
+                propSchema?.const !== undefined ||
+                (Array.isArray(propSchema?.enum) && propSchema.enum.length === 1);
+
+            if (!hasConst) continue;
+
+            const allMatch = inlineVariants.every((v: any) => {
+                const p = v.properties?.[propName];
+                if (!p) return false;
+                return (
+                    p.const !== undefined ||
+                    (Array.isArray(p.enum) && p.enum.length === 1)
+                );
+            });
+
+            if (allMatch) return propName;
+        }
+
+        return null;
+    }
+
+    private importDiscriminatedUnion(
+        name: string,
+        obj: any,
+        discriminatorField: string,
+    ): MatchField | CompositionField {
+        const elements: any[] = obj.oneOf;
+        const variants: Record<string, ObjectField | RefField> = {};
+
+        for (const element of elements) {
+            if (element.$ref !== undefined) {
+                // $ref variant — we cannot extract the const key, use the ref basename
+                const ref = this.importRef(name, element);
+                const baseName = ref.ref.split('/').pop() ?? ref.ref;
+                variants[baseName] = ref;
+                continue;
+            }
+
+            // Extract variant key from discriminator property
+            const discProp = element.properties?.[discriminatorField];
+            let variantKey: string;
+            if (discProp?.const !== undefined) {
+                variantKey = String(discProp.const);
+            } else if (Array.isArray(discProp?.enum) && discProp.enum.length === 1) {
+                variantKey = String(discProp.enum[0]);
+            } else {
+                // Cannot determine variant key, fall back to generic composition
+                return this.importComposition(name, obj, 'oneOf');
+            }
+
+            // Import the variant schema as an object, stripping the discriminator property
+            const strippedProperties = { ...element.properties };
+            delete strippedProperties[discriminatorField];
+
+            const strippedRequired = Array.isArray(element.required)
+                ? element.required.filter((r: string) => r !== discriminatorField)
+                : [];
+
+            const strippedElement = {
+                ...element,
+                properties: strippedProperties,
+                required: strippedRequired,
+            };
+
+            const imported = this.importObject(variantKey, strippedElement);
+            variants[variantKey] = imported;
+        }
+
+        return {
+            ...createBaseField(name, 'match', obj.description ?? ''),
+            type: 'match',
+            discriminator: discriminatorField,
+            variants,
+            ...this.universalModifiers(obj),
+        } as MatchField;
     }
 
     // -----------------------------------------------------------------------

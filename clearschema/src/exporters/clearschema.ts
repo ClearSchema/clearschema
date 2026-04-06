@@ -10,6 +10,7 @@ import {
     UnionField,
     RefField,
     CompositionField,
+    MatchField,
     SchemaDefinition,
     FieldTypeName,
 } from '../ast/types';
@@ -104,6 +105,9 @@ export class ClearSchemaSerializer implements Exporter<string> {
                 break;
             case 'oneOf':
                 typeName = 'oneOf';
+                break;
+            case 'match':
+                typeName = `match(${(field as MatchField).discriminator})`;
                 break;
             default:
                 typeName = field.type;
@@ -235,6 +239,12 @@ export class ClearSchemaSerializer implements Exporter<string> {
                     lines.push(...this.serializeCompositionItem(schema, depth));
                 }
                 break;
+
+            case 'match':
+                for (const [variantKey, variant] of Object.entries((field as MatchField).variants)) {
+                    lines.push(...this.serializeMatchVariant(variantKey, variant, depth));
+                }
+                break;
         }
 
         return lines;
@@ -302,6 +312,22 @@ export class ClearSchemaSerializer implements Exporter<string> {
         }
 
         return [`${prefix}- ${valueType.type}`];
+    }
+
+    private serializeMatchVariant(variantKey: string, variant: ObjectField | RefField, depth: number): string[] {
+        const prefix = this.indent.repeat(depth);
+
+        if (variant.type === 'ref') {
+            return [`${prefix}${variantKey}: $ref: ${(variant as RefField).ref}`];
+        }
+
+        // Inline object variant
+        const objField = variant as ObjectField;
+        const lines: string[] = [`${prefix}${variantKey}:`];
+        for (const child of objField.fields) {
+            lines.push(...this.serializeField(child, depth + 1));
+        }
+        return lines;
     }
 
     private serializeCompositionItem(schema: Field | RefField, depth: number): string[] {

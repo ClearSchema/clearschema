@@ -9,6 +9,7 @@ import {
     TupleArrayField,
     UnionField,
     RefField,
+    MatchField,
 } from '../ast/types';
 import { Exporter, ExportOptions } from './types';
 
@@ -20,12 +21,14 @@ export interface PydanticExportOptions extends ExportOptions {
 export class PydanticExporter implements Exporter<string> {
     private indent = '    ';
     private imports = new Set<string>();
+    private extraClasses: string[] = [];
 
     export(schema: Schema, options?: PydanticExportOptions): string {
         const includeComments = options?.includeComments ?? true;
         const useTyping = options?.useTyping ?? true;
 
         this.imports.clear();
+        this.extraClasses = [];
         this.imports.add('from pydantic import BaseModel, Field');
 
         const lines: string[] = [];
@@ -66,6 +69,7 @@ export class PydanticExporter implements Exporter<string> {
         const importLines = Array.from(this.imports).sort();
         lines.push(...importLines);
         lines.push('');
+        lines.push(...this.extraClasses);
         lines.push(...classLines);
 
         return lines.join('\n');
@@ -149,6 +153,8 @@ export class PydanticExporter implements Exporter<string> {
                 return this.exportTupleType(field as TupleArrayField, useTyping);
             case 'union':
                 return this.exportUnionType(field as UnionField, useTyping);
+            case 'match':
+                return this.exportMatchType(field as MatchField, useTyping);
             case 'ref':
                 return this.exportRefType(field as RefField);
             default:
@@ -235,6 +241,48 @@ export class PydanticExporter implements Exporter<string> {
         this.imports.add('from typing import Union');
         const types = field.types.map(t => this.mapPrimitiveType(t as string));
         return `Union[${types.join(', ')}]`;
+    }
+
+    private exportMatchType(field: MatchField, _useTyping: boolean): string {
+        this.imports.add('from typing import Annotated, Literal');
+        this.imports.add('from pydantic import Discriminator');
+
+        const variantClassNames: string[] = [];
+
+        for (const [variantKey, variant] of Object.entries(field.variants)) {
+            if (variant.type === 'ref') {
+                // For $ref variants, use the ref name and assume it has the discriminator Literal field
+                const refName = this.exportRefType(variant);
+                variantClassNames.push(refName);
+            } else {
+                // Inline ObjectField variant: emit a Pydantic model class
+                const className = variantKey
+                    .split(/[-_]/)
+                    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+                    .join('') + 'Variant';
+                variantClassNames.push(className);
+
+                const classLines: string[] = [];
+                classLines.push(`class ${className}(BaseModel):`);
+                classLines.push(`${this.indent}${field.discriminator}: Literal['${variantKey}']`);
+
+                for (const childField of variant.fields) {
+                    const fieldType = this.exportFieldType(childField, false);
+                    if (childField.required) {
+                        classLines.push(`${this.indent}${childField.name}: ${fieldType}`);
+                    } else {
+                        this.imports.add('from typing import Optional');
+                        classLines.push(`${this.indent}${childField.name}: Optional[${fieldType}] = None`);
+                    }
+                }
+
+                classLines.push('');
+                this.extraClasses.push(...classLines);
+            }
+        }
+
+        const unionTypes = variantClassNames.join(' | ');
+        return `Annotated[${unionTypes}, Discriminator('${field.discriminator}')]`;
     }
 
     private exportRefType(field: RefField): string {

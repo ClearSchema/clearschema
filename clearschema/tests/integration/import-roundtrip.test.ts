@@ -183,6 +183,44 @@ describe('Integration Tests - Import Round-trip', () => {
         });
     });
 
+    describe('Discriminated union (match) round-trip', () => {
+        it('.clear with match → JSON Schema → import → MatchField', () => {
+            const clearSource = [
+                'event: match(type): UI event',
+                '  click:',
+                '    x: number.required: X coordinate',
+                '    y: number.required: Y coordinate',
+                '  keypress:',
+                '    key: string.required: Key pressed',
+                '',
+            ].join('\n');
+
+            const originalAst = parse(clearSource);
+            expect(originalAst.errors).toBeUndefined();
+
+            // Export to JSON Schema
+            const jsonSchema = exportJsonSchema(originalAst);
+
+            // Import back
+            const { schema: importedAst } = importJsonSchema(jsonSchema);
+
+            // Verify the MatchField structure
+            expect(importedAst.fields.length).toBe(1);
+            const event = importedAst.fields[0] as any;
+            expect(event.type).toBe('match');
+            expect(event.discriminator).toBe('type');
+            expect(Object.keys(event.variants)).toEqual(['click', 'keypress']);
+
+            const click = event.variants['click'];
+            expect(click.type).toBe('object');
+            expect(click.fields.map((f: any) => f.name)).toEqual(['x', 'y']);
+
+            const keypress = event.variants['keypress'];
+            expect(keypress.type).toBe('object');
+            expect(keypress.fields.map((f: any) => f.name)).toEqual(['key']);
+        });
+    });
+
     describe('Draft-07 specific handling', () => {
         it('normalizes definitions and tuple syntax from draft-07', () => {
             const draft07Schema = {

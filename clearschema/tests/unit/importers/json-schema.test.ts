@@ -11,6 +11,7 @@ import {
     UnionField,
     RefField,
     CompositionField,
+    MatchField,
     Field,
 } from '../../../src/ast/types';
 
@@ -764,6 +765,259 @@ describe('JSON Schema Importer', () => {
 
             const value = fieldByName(schema.fields, 'value') as StringField;
             expect(value.description).toBe('Outer description');
+        });
+    });
+
+    // -----------------------------------------------------------------------
+    // Discriminated unions (match)
+    // -----------------------------------------------------------------------
+
+    describe('discriminated unions', () => {
+        it('Tier 1: oneOf + discriminator annotation → MatchField', () => {
+            const { schema } = importJsonSchema({
+                type: 'object',
+                properties: {
+                    event: {
+                        oneOf: [
+                            {
+                                type: 'object',
+                                properties: {
+                                    type: { const: 'click' },
+                                    x: { type: 'number' },
+                                    y: { type: 'number' },
+                                },
+                                required: ['type', 'x', 'y'],
+                            },
+                            {
+                                type: 'object',
+                                properties: {
+                                    type: { const: 'keypress' },
+                                    key: { type: 'string' },
+                                },
+                                required: ['type', 'key'],
+                            },
+                        ],
+                        discriminator: { propertyName: 'type' },
+                    },
+                },
+            });
+
+            const event = fieldByName(schema.fields, 'event') as MatchField;
+            expect(event.type).toBe('match');
+            expect(event.discriminator).toBe('type');
+            expect(Object.keys(event.variants)).toEqual(['click', 'keypress']);
+
+            const click = event.variants['click'] as ObjectField;
+            expect(click.type).toBe('object');
+            expect(click.fields.map(f => f.name)).toEqual(['x', 'y']);
+            // Discriminator field should be stripped
+            expect(click.fields.find(f => f.name === 'type')).toBeUndefined();
+
+            const keypress = event.variants['keypress'] as ObjectField;
+            expect(keypress.type).toBe('object');
+            expect(keypress.fields.map(f => f.name)).toEqual(['key']);
+        });
+
+        it('Tier 2: oneOf with shared const property → MatchField', () => {
+            const { schema } = importJsonSchema({
+                type: 'object',
+                properties: {
+                    shape: {
+                        oneOf: [
+                            {
+                                type: 'object',
+                                properties: {
+                                    kind: { const: 'circle' },
+                                    radius: { type: 'number' },
+                                },
+                                required: ['kind', 'radius'],
+                            },
+                            {
+                                type: 'object',
+                                properties: {
+                                    kind: { const: 'square' },
+                                    side: { type: 'number' },
+                                },
+                                required: ['kind', 'side'],
+                            },
+                        ],
+                    },
+                },
+            });
+
+            const shape = fieldByName(schema.fields, 'shape') as MatchField;
+            expect(shape.type).toBe('match');
+            expect(shape.discriminator).toBe('kind');
+            expect(Object.keys(shape.variants)).toEqual(['circle', 'square']);
+
+            const circle = shape.variants['circle'] as ObjectField;
+            expect(circle.fields.map(f => f.name)).toEqual(['radius']);
+
+            const square = shape.variants['square'] as ObjectField;
+            expect(square.fields.map(f => f.name)).toEqual(['side']);
+        });
+
+        it('Tier 2: detects single-element enum as const', () => {
+            const { schema } = importJsonSchema({
+                type: 'object',
+                properties: {
+                    action: {
+                        oneOf: [
+                            {
+                                type: 'object',
+                                properties: {
+                                    op: { enum: ['add'] },
+                                    value: { type: 'number' },
+                                },
+                            },
+                            {
+                                type: 'object',
+                                properties: {
+                                    op: { enum: ['remove'] },
+                                    id: { type: 'string' },
+                                },
+                            },
+                        ],
+                    },
+                },
+            });
+
+            const action = fieldByName(schema.fields, 'action') as MatchField;
+            expect(action.type).toBe('match');
+            expect(action.discriminator).toBe('op');
+            expect(Object.keys(action.variants)).toEqual(['add', 'remove']);
+        });
+
+        it('oneOf WITHOUT shared const → falls through to CompositionField', () => {
+            const { schema } = importJsonSchema({
+                type: 'object',
+                properties: {
+                    data: {
+                        oneOf: [
+                            {
+                                type: 'object',
+                                properties: {
+                                    name: { type: 'string' },
+                                },
+                            },
+                            {
+                                type: 'object',
+                                properties: {
+                                    count: { type: 'number' },
+                                },
+                            },
+                        ],
+                    },
+                },
+            });
+
+            const data = fieldByName(schema.fields, 'data') as CompositionField;
+            expect(data.type).toBe('oneOf');
+            expect(data.schemas).toHaveLength(2);
+        });
+
+        it('oneOf with $ref variants → falls through to CompositionField', () => {
+            const { schema } = importJsonSchema({
+                type: 'object',
+                properties: {
+                    shape: {
+                        oneOf: [
+                            { $ref: '#/$defs/Circle' },
+                            { $ref: '#/$defs/Square' },
+                        ],
+                    },
+                },
+            });
+
+            const shape = fieldByName(schema.fields, 'shape') as CompositionField;
+            expect(shape.type).toBe('oneOf');
+            expect(shape.schemas).toHaveLength(2);
+        });
+
+        it('oneOf with mixed $ref and inline without shared const → CompositionField', () => {
+            const { schema } = importJsonSchema({
+                type: 'object',
+                properties: {
+                    thing: {
+                        oneOf: [
+                            { $ref: '#/$defs/Foo' },
+                            { type: 'object', properties: { x: { type: 'string' } } },
+                        ],
+                    },
+                },
+            });
+
+            const thing = fieldByName(schema.fields, 'thing') as CompositionField;
+            expect(thing.type).toBe('oneOf');
+        });
+
+        it('oneOf with mixed $ref and inline WITH shared const → MatchField (Fix #2)', () => {
+            const { schema } = importJsonSchema({
+                type: 'object',
+                properties: {
+                    payment: {
+                        oneOf: [
+                            { $ref: '#/$defs/BankTransfer' },
+                            {
+                                type: 'object',
+                                properties: {
+                                    method: { const: 'credit-card' },
+                                    cardNumber: { type: 'string' },
+                                },
+                                required: ['method'],
+                            },
+                            {
+                                type: 'object',
+                                properties: {
+                                    method: { const: 'paypal' },
+                                    email: { type: 'string' },
+                                },
+                                required: ['method'],
+                            },
+                        ],
+                    },
+                },
+            });
+
+            const payment = fieldByName(schema.fields, 'payment') as MatchField;
+            expect(payment.type).toBe('match');
+            expect(payment.discriminator).toBe('method');
+            // $ref variant keyed by basename, inline variants keyed by const value
+            expect(Object.keys(payment.variants)).toContain('BankTransfer');
+            expect(Object.keys(payment.variants)).toContain('credit-card');
+            expect(Object.keys(payment.variants)).toContain('paypal');
+        });
+
+        it('importDiscriminatedUnion falls back to composition when variant lacks discriminator (Fix #1)', () => {
+            const { schema } = importJsonSchema({
+                type: 'object',
+                properties: {
+                    event: {
+                        oneOf: [
+                            {
+                                type: 'object',
+                                properties: {
+                                    type: { const: 'click' },
+                                    x: { type: 'number' },
+                                },
+                            },
+                            {
+                                type: 'object',
+                                properties: {
+                                    // No 'type' discriminator property at all
+                                    data: { type: 'string' },
+                                },
+                            },
+                        ],
+                        discriminator: { propertyName: 'type' },
+                    },
+                },
+            });
+
+            // Should fall back to composition instead of returning partial MatchField
+            const event = fieldByName(schema.fields, 'event') as CompositionField;
+            expect(event.type).toBe('oneOf');
+            expect(event.schemas).toHaveLength(2);
         });
     });
 

@@ -23,6 +23,7 @@ const TYPE_COMPLETIONS: TypeCompletion[] = [
     { label: 'allOf', detail: 'Composition type', documentation: 'Combine schemas: value must match all' },
     { label: 'anyOf', detail: 'Composition type', documentation: 'Combine schemas: value must match at least one' },
     { label: 'oneOf', detail: 'Composition type', documentation: 'Combine schemas: value must match exactly one' },
+    { label: 'match', detail: 'Discriminated union', documentation: 'A discriminated union that matches on a property value. Syntax: match(discriminatorField)' },
 ];
 
 function makeTypeCompletions(): CompletionItem[] {
