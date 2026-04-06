@@ -62,11 +62,13 @@ export type {
     UnionField,
     RefField,
     CompositionField,
+    MatchField,
 
     // Type names
     PrimitiveType,
     ComplexType,
     CompositionType,
+    MatchType,
     FieldTypeName,
 
     // Modifiers

@@ -16,7 +16,8 @@ export interface ASTNode {
 export type PrimitiveType = 'string' | 'number' | 'integer' | 'boolean' | 'null';
 export type ComplexType = 'object' | 'array' | 'array.tuple' | 'map';
 export type CompositionType = 'allOf' | 'anyOf' | 'oneOf';
-export type FieldTypeName = PrimitiveType | ComplexType | 'union' | 'ref' | CompositionType;
+export type MatchType = 'match';
+export type FieldTypeName = PrimitiveType | ComplexType | 'union' | 'ref' | CompositionType | MatchType;
 
 export interface Modifier extends ASTNode {
     name: string;
@@ -115,6 +116,12 @@ export interface CompositionField extends BaseField {
     schemas: (Field | RefField)[];
 }
 
+export interface MatchField extends BaseField {
+    type: 'match';
+    discriminator: string;
+    variants: Record<string, ObjectField | RefField>;
+}
+
 export type Field =
     | StringField
     | NumberField
@@ -126,7 +133,8 @@ export type Field =
     | TupleArrayField
     | UnionField
     | RefField
-    | CompositionField;
+    | CompositionField
+    | MatchField;
 
 export interface SchemaDefinition extends ASTNode {
     name: string;

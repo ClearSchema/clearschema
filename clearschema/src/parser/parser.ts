@@ -12,6 +12,7 @@ import {
     UnionField,
     RefField,
     CompositionField,
+    MatchField,
     SchemaDefinition,
     ImportDeclaration,
     FieldTypeName,
@@ -33,6 +34,7 @@ interface ParsedTypeString {
     type: FieldTypeName;
     required: boolean;
     nullable: boolean;
+    discriminator?: string;
 }
 
 interface ParsedFieldLine {
@@ -40,6 +42,7 @@ interface ParsedFieldLine {
     typeInfo: ParsedTypeString;
     description: string;
     location: SourceLocation;
+    discriminator?: string;
 }
 
 interface ParsedModifier {
@@ -245,6 +248,12 @@ class Parser {
 
     parseFieldWithModifiers(): Field {
         const fieldLine = this.parseFieldLine();
+
+        // Special handling for match type: parse variants instead of normal children
+        if (fieldLine.typeInfo.type === 'match') {
+            return this.parseMatchBlock(fieldLine);
+        }
+
         const modifiers: ParsedModifier[] = [];
         const childFields: Field[] = [];
         const arrayItems: ArrayItemInfo[] = [];
@@ -327,6 +336,7 @@ class Parser {
             typeInfo,
             description,
             location: token.location,
+            discriminator: typeInfo.discriminator,
         };
     }
 
@@ -334,6 +344,11 @@ class Parser {
         // Check for union type (contains |)
         if (typeString.includes('|')) {
             return this.parseUnionTypeString(typeString, location);
+        }
+
+        // Check for match(discriminator) syntax
+        if (typeString.startsWith('match(')) {
+            return this.parseMatchTypeString(typeString, location);
         }
 
         const parts = typeString.split('.');
@@ -416,7 +431,7 @@ class Parser {
     }
 
     private isValidType(typeName: string): boolean {
-        return ALL_TYPES.includes(typeName) || typeName === 'ref' || typeName === 'union';
+        return ALL_TYPES.includes(typeName) || typeName === 'ref' || typeName === 'union' || typeName === 'match';
     }
 
     private parseModifierLine(): ParsedModifier {
@@ -723,6 +738,15 @@ class Parser {
             case 'anyOf':
             case 'oneOf':
                 return this.buildCompositionField(baseProps, type as CompositionType, arrayItems);
+            case 'match':
+                // Match fields are handled by parseMatchBlock before reaching buildField.
+                // This case should not be reached in normal flow.
+                throw new ParseError(
+                    'Unexpected match type in buildField',
+                    location,
+                    this.source,
+                    'match blocks should be parsed by parseMatchBlock'
+                );
             default:
                 throw new ParseError(
                     `Unsupported type: ${type}`,
@@ -998,6 +1022,259 @@ class Parser {
             ...baseProps,
             type,
             schemas,
+        };
+    }
+
+    private parseMatchTypeString(typeString: string, location: SourceLocation): ParsedTypeString {
+        // Extract discriminator from match(discriminator) or match(discriminator).required etc.
+        const closeParen = typeString.indexOf(')');
+        if (closeParen === -1) {
+            throw new ParseError(
+                'Invalid match syntax: missing closing parenthesis',
+                location,
+                this.source,
+                'Expected format: match(discriminatorField)'
+            );
+        }
+
+        const discriminator = typeString.substring(6, closeParen).trim(); // 'match('.length === 6
+        if (!discriminator) {
+            throw new ParseError(
+                'match requires a discriminator field name',
+                location,
+                this.source,
+                'Expected format: match(type) or match(kind)'
+            );
+        }
+
+        // Process inline modifiers after the closing paren: match(type).required
+        let required = false;
+        let nullable = false;
+        const afterParen = typeString.substring(closeParen + 1);
+        if (afterParen) {
+            const parts = afterParen.split('.').filter(Boolean);
+            for (const mod of parts) {
+                if (mod === 'required') required = true;
+                else if (mod === 'nullable') nullable = true;
+                else {
+                    throw new ParseError(
+                        `Unknown inline modifier: "${mod}"`,
+                        location,
+                        this.source,
+                        'Valid inline modifiers are: required, nullable'
+                    );
+                }
+            }
+        }
+
+        return {
+            type: 'match',
+            required,
+            nullable,
+            discriminator,
+        };
+    }
+
+    private parseMatchBlock(fieldLine: ParsedFieldLine): MatchField {
+        const { name, typeInfo, description, location, discriminator } = fieldLine;
+
+        if (!discriminator) {
+            throw new ParseError(
+                'match requires a discriminator field name',
+                location,
+                this.source,
+                'Expected format: match(type)'
+            );
+        }
+
+        const variants: Record<string, ObjectField | RefField> = {};
+        const seenKeys = new Set<string>();
+
+        // Match blocks must have an indented block of variants
+        if (!this.stream.match(TokenType.INDENT)) {
+            throw new ParseError(
+                'match requires at least one variant',
+                location,
+                this.source,
+                'Add variant blocks indented under the match field'
+            );
+        }
+        this.stream.advance(); // consume INDENT
+
+        while (!this.stream.match(TokenType.DEDENT) && !this.stream.isAtEnd()) {
+            if (this.stream.match(TokenType.FIELD_LINE)) {
+                const variantToken = this.stream.advance();
+                const variantLine = variantToken.value;
+                const colonIndex = variantLine.indexOf(':');
+
+                if (colonIndex === -1) {
+                    throw new ParseError(
+                        'Invalid variant syntax',
+                        variantToken.location,
+                        this.source,
+                        'Expected format: variant_key:'
+                    );
+                }
+
+                const variantKey = variantLine.substring(0, colonIndex).trim();
+                const rest = variantLine.substring(colonIndex + 1).trim();
+
+                // Validate unique variant keys
+                if (seenKeys.has(variantKey)) {
+                    throw new ParseError(
+                        `Duplicate variant key: "${variantKey}"`,
+                        variantToken.location,
+                        this.source,
+                        'Each variant key must be unique within a match block'
+                    );
+                }
+                seenKeys.add(variantKey);
+
+                // Check if this is a single-line $ref variant: "variantKey: $ref: path"
+                if (rest.startsWith('$ref:') || rest === '$ref') {
+                    const refPath = rest.startsWith('$ref:') ? rest.substring(5).trim() : '';
+                    if (!refPath) {
+                        throw new ParseError(
+                            'Missing $ref path',
+                            variantToken.location,
+                            this.source,
+                            'Expected format: variant_key: $ref: #/$defs/TypeName'
+                        );
+                    }
+                    variants[variantKey] = {
+                        name: variantKey,
+                        type: 'ref',
+                        ref: refPath,
+                        description: '',
+                        required: false,
+                        nullable: false,
+                        rawModifiers: {},
+                        modifiers: [],
+                        location: variantToken.location,
+                    } as RefField;
+                } else if (rest === '') {
+                    // Variant with indented children: inline object or $ref
+                    if (this.stream.match(TokenType.INDENT)) {
+                        this.stream.advance(); // consume INDENT
+
+                        // Check first child to detect $ref variant
+                        if (this.stream.match(TokenType.FIELD_LINE)) {
+                            const peeked = this.stream.current().value.trim();
+                            if (peeked.startsWith('$ref:')) {
+                                // Single $ref child: parse as ref variant
+                                const refToken = this.stream.advance();
+                                const refLine = refToken.value.trim();
+                                const refColonIdx = refLine.indexOf(':');
+                                const refRest = refLine.substring(refColonIdx + 1).trim();
+                                // Handle "$ref: path" — the name is "$ref", rest after first colon is "path" or " path: more"
+                                // But we need the full ref path which may contain colons (#/$defs/)
+                                // Actually for "$ref: #/$defs/TypeName", refColonIdx=4, refRest="#/$defs/TypeName"
+                                // But there could be a description colon: "$ref: #/$defs/Type: some desc"
+                                // We just want the second segment: after "$ref" the rest is the path
+                                const pathPart = refRest.includes(':') ? refRest.substring(0, refRest.indexOf(':')).trim() : refRest;
+                                const refPath = pathPart || refRest;
+
+                                variants[variantKey] = {
+                                    name: variantKey,
+                                    type: 'ref',
+                                    ref: refPath,
+                                    description: '',
+                                    required: false,
+                                    nullable: false,
+                                    rawModifiers: {},
+                                    modifiers: [],
+                                    location: refToken.location,
+                                } as RefField;
+
+                                // Consume remaining tokens until DEDENT
+                                while (!this.stream.match(TokenType.DEDENT) && !this.stream.isAtEnd()) {
+                                    this.stream.advance();
+                                }
+                            } else {
+                                // Inline object variant: parse child fields normally
+                                const childFields: Field[] = [];
+                                while (!this.stream.match(TokenType.DEDENT) && !this.stream.isAtEnd()) {
+                                    if (this.stream.match(TokenType.FIELD_LINE)) {
+                                        childFields.push(this.parseFieldWithModifiers());
+                                    } else if (this.stream.match(TokenType.MODIFIER_LINE)) {
+                                        // Skip modifiers at variant level (not supported)
+                                        this.stream.advance();
+                                    } else {
+                                        this.stream.advance();
+                                    }
+                                }
+
+                                variants[variantKey] = {
+                                    name: variantKey,
+                                    type: 'object',
+                                    fields: childFields,
+                                    description: '',
+                                    required: false,
+                                    nullable: false,
+                                    rawModifiers: {},
+                                    modifiers: [],
+                                    location: variantToken.location,
+                                } as ObjectField;
+                            }
+                        }
+
+                        // Consume DEDENT for variant block
+                        if (this.stream.match(TokenType.DEDENT)) {
+                            this.stream.advance();
+                        }
+                    } else {
+                        // Variant with no children — empty variant, create empty object
+                        variants[variantKey] = {
+                            name: variantKey,
+                            type: 'object',
+                            fields: [],
+                            description: '',
+                            required: false,
+                            nullable: false,
+                            rawModifiers: {},
+                            modifiers: [],
+                            location: variantToken.location,
+                        } as ObjectField;
+                    }
+                } else {
+                    throw new ParseError(
+                        `Invalid variant syntax after "${variantKey}:"`,
+                        variantToken.location,
+                        this.source,
+                        'Variants must be empty (with indented children) or use $ref: syntax'
+                    );
+                }
+            } else {
+                // Skip unexpected tokens
+                this.stream.advance();
+            }
+        }
+
+        // Consume DEDENT for match block
+        if (this.stream.match(TokenType.DEDENT)) {
+            this.stream.advance();
+        }
+
+        if (Object.keys(variants).length === 0) {
+            throw new ParseError(
+                'match requires at least one variant',
+                location,
+                this.source,
+                'Add variant blocks indented under the match field'
+            );
+        }
+
+        return {
+            name,
+            type: 'match',
+            discriminator,
+            variants,
+            description,
+            required: typeInfo.required,
+            nullable: typeInfo.nullable,
+            rawModifiers: {},
+            modifiers: [],
+            location,
         };
     }
 
