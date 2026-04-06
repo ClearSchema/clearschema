@@ -41,20 +41,20 @@ age: number: Age`;
 
         describe('modifier lines', () => {
             it('tokenizes a modifier line with ^', () => {
-                const input = '  ^ minLength: 5';
+                const input = '  ^ min: 5';
                 const { tokens, errors } = tokenize(input);
 
                 expect(errors).toHaveLength(0);
                 // INDENT + MODIFIER_LINE + DEDENT + EOF
                 const modifierToken = tokens.find(t => t.type === TokenType.MODIFIER_LINE);
                 expect(modifierToken).toBeDefined();
-                expect(modifierToken!.value).toBe('^ minLength: 5');
+                expect(modifierToken!.value).toBe('^ min: 5');
             });
 
             it('tokenizes field with block modifiers', () => {
                 const input = `name: string: Name
-  ^ minLength: 2
-  ^ maxLength: 50`;
+  ^ min: 2
+  ^ max: 50`;
                 const { tokens, errors } = tokenize(input);
 
                 expect(errors).toHaveLength(0);
@@ -67,8 +67,8 @@ age: number: Age`;
 
                 const modifiers = tokens.filter(t => t.type === TokenType.MODIFIER_LINE);
                 expect(modifiers).toHaveLength(2);
-                expect(modifiers[0].value).toBe('^ minLength: 2');
-                expect(modifiers[1].value).toBe('^ maxLength: 50');
+                expect(modifiers[0].value).toBe('^ min: 2');
+                expect(modifiers[1].value).toBe('^ max: 50');
             });
         });
 
@@ -224,7 +224,7 @@ age: number: Age`;
 
         beforeEach(() => {
             const input = `name: string: Name
-  ^ minLength: 2
+  ^ min: 2
 age: number: Age`;
             const { tokens } = tokenize(input);
             stream = new TokenStream(tokens);

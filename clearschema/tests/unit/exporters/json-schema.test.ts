@@ -17,7 +17,7 @@ describe('JSON Schema Exporter', () => {
         it('exports string with modifiers', () => {
             const schema = parse(`email: string: Email
   ^ format: email
-  ^ minLength: 5`);
+  ^ min: 5`);
             const output = exportJsonSchema(schema);
 
             expect(output.properties?.email).toEqual({
@@ -137,8 +137,8 @@ describe('JSON Schema Exporter', () => {
         it('exports array with modifiers', () => {
             const schema = parse(`tags: array: Tags
   - string
-  ^ minItems: 1
-  ^ maxItems: 10
+  ^ min: 1
+  ^ max: 10
   ^ uniqueItems: true`);
             const output = exportJsonSchema(schema);
 
@@ -448,7 +448,7 @@ user: $ref: #/$defs/User`);
 
 user: object.required: User
   name: string.required: Full name
-    ^ minLength: 2
+    ^ min: 2
   email: string.required: Email
     ^ format: email
   age: integer: Age
@@ -457,8 +457,8 @@ user: object.required: User
   address: $ref: #/$defs/Address
   tags: array: Tags
     - string
-    ^ minItems: 0
-    ^ maxItems: 10`);
+    ^ min: 0
+    ^ max: 10`);
 
             const output = exportJsonSchema(schema);
 

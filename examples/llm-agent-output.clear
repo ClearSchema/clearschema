@@ -3,7 +3,7 @@
 
 plan: object.required: Agent execution plan
   goal: string.required: High-level objective
-    ^ minLength: 5
+    ^ min: 5
 
   steps: array.required: Ordered list of planned actions
     - object:

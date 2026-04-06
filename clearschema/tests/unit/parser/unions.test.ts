@@ -1,4 +1,5 @@
 import { parseField } from '../../../src/parser/parser';
+import { ParseError } from '../../../src/parser/errors';
 import { UnionField } from '../../../src/ast/types';
 
 describe('Parser - Union Types', () => {
@@ -51,15 +52,47 @@ describe('Parser - Union Types', () => {
         expect(field.types).toEqual(['string', 'number', 'boolean']);
     });
 
-    it('parses union with modifiers', () => {
+    it('parses union with non-constraint modifiers', () => {
         const input = `id: string|number: Flexible ID
-  ^ minLength: 3
-  ^ min: 1000`;
+  ^ default: "unknown"`;
 
         const field = parseField(input) as UnionField;
 
         expect(field.type).toBe('union');
-        expect(field.rawModifiers['minLength']).toBe(3);
-        expect(field.rawModifiers['min']).toBe(1000);
+        expect(field.rawModifiers['default']).toBe('unknown');
+    });
+
+    it('rejects min on union type as ambiguous', () => {
+        const input = `id: string|number: Flexible ID
+  ^ min: 5`;
+
+        expect(() => parseField(input)).toThrow(ParseError);
+        try {
+            parseField(input);
+        } catch (e) {
+            expect((e as ParseError).message).toContain('"min" is ambiguous on union types');
+            expect((e as ParseError).hint).toContain('string.min');
+        }
+    });
+
+    it('rejects max on union type as ambiguous', () => {
+        const input = `id: string|number: Flexible ID
+  ^ max: 100`;
+
+        expect(() => parseField(input)).toThrow(ParseError);
+    });
+
+    it('rejects gt on union type as ambiguous', () => {
+        const input = `id: string|number: Flexible ID
+  ^ gt: 0`;
+
+        expect(() => parseField(input)).toThrow(ParseError);
+    });
+
+    it('rejects lt on union type as ambiguous', () => {
+        const input = `id: string|number: Flexible ID
+  ^ lt: 100`;
+
+        expect(() => parseField(input)).toThrow(ParseError);
     });
 });

@@ -82,8 +82,8 @@ describe('Parser - Object Fields', () => {
         it('parses object with modifiers on child fields', () => {
             const input = `user: object: User
   name: string.required: Name
-    ^ minLength: 2
-    ^ maxLength: 50
+    ^ min: 2
+    ^ max: 50
   age: number: Age
     ^ min: 0
     ^ max: 150`;

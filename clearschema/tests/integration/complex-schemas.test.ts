@@ -17,8 +17,8 @@ user: object.required: User profile
   id: string.required: Unique identifier
     ^ format: uuid
   name: string.required: Full name
-    ^ minLength: 2
-    ^ maxLength: 100
+    ^ min: 2
+    ^ max: 100
   email: string.required: Email address
     ^ format: email
   age: integer: Age in years
@@ -31,7 +31,7 @@ user: object.required: User profile
       country: string.required: Country
       zipCode: string: ZIP/Postal code
         ^ pattern: ^[0-9]{5}(-[0-9]{4})?$
-    ^ minItems: 1
+    ^ min: 1
   tags: array: User tags
     - string
     ^ uniqueItems: true
@@ -210,7 +210,7 @@ user: object.required: User profile
       discount: number: Discount amount
         ^ min: 0
         ^ default: 0
-    ^ minItems: 1
+    ^ min: 1
   shippingAddress: object.required: Shipping address
     street: string.required: Street
     city: string.required: City
@@ -384,8 +384,8 @@ user: object.required: User profile
   id: string.required: User ID
     ^ format: uuid
   name: string.required: Full name
-    ^ minLength: 1
-    ^ maxLength: 100
+    ^ min: 1
+    ^ max: 100
   email: string.required: Email
     ^ format: email
   age: integer: Age

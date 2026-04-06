@@ -172,4 +172,21 @@ age: integer: Age`;
             expect(innerMap.valueType).toBe('string');
         });
     });
+
+    describe('map constraint rejection', () => {
+        it('rejects min on map field', () => {
+            const input = `metadata: map: Tags\n  - string\n  ^ min: 1`;
+            expect(() => parseField(input)).toThrow();
+        });
+
+        it('rejects max on map field', () => {
+            const input = `metadata: map: Tags\n  - string\n  ^ max: 10`;
+            expect(() => parseField(input)).toThrow();
+        });
+
+        it('rejects range on map field', () => {
+            const input = `metadata: map: Tags\n  - string\n  ^ range: [1, 10]`;
+            expect(() => parseField(input)).toThrow();
+        });
+    });
 });

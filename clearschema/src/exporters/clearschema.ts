@@ -161,10 +161,10 @@ export class ClearSchemaSerializer implements Exporter<string> {
 
     private addStringModifiers(field: StringField, prefix: string, lines: string[]): void {
         if (field.minLength !== undefined) {
-            lines.push(`${prefix}^ minLength: ${field.minLength}`);
+            lines.push(`${prefix}^ min: ${field.minLength}`);
         }
         if (field.maxLength !== undefined) {
-            lines.push(`${prefix}^ maxLength: ${field.maxLength}`);
+            lines.push(`${prefix}^ max: ${field.maxLength}`);
         }
         if (field.pattern !== undefined) {
             lines.push(`${prefix}^ pattern: ${field.pattern}`);
@@ -182,10 +182,10 @@ export class ClearSchemaSerializer implements Exporter<string> {
             lines.push(`${prefix}^ max: ${field.max}`);
         }
         if (field.exclusiveMin !== undefined) {
-            lines.push(`${prefix}^ exclusiveMin: ${field.exclusiveMin}`);
+            lines.push(`${prefix}^ gt: ${field.exclusiveMin}`);
         }
         if (field.exclusiveMax !== undefined) {
-            lines.push(`${prefix}^ exclusiveMax: ${field.exclusiveMax}`);
+            lines.push(`${prefix}^ lt: ${field.exclusiveMax}`);
         }
         if (field.multipleOf !== undefined) {
             lines.push(`${prefix}^ multipleOf: ${field.multipleOf}`);
@@ -194,10 +194,10 @@ export class ClearSchemaSerializer implements Exporter<string> {
 
     private addArrayModifiers(field: ArrayField, prefix: string, lines: string[]): void {
         if (field.minItems !== undefined) {
-            lines.push(`${prefix}^ minItems: ${field.minItems}`);
+            lines.push(`${prefix}^ min: ${field.minItems}`);
         }
         if (field.maxItems !== undefined) {
-            lines.push(`${prefix}^ maxItems: ${field.maxItems}`);
+            lines.push(`${prefix}^ max: ${field.maxItems}`);
         }
         if (field.uniqueItems === true) {
             lines.push(`${prefix}^ uniqueItems: true`);

@@ -3,7 +3,7 @@
 
 get_weather: object.required: Get current weather for a location
   location: string.required: City name or coordinates
-    ^ minLength: 1
+    ^ min: 1
 
   units: string: Temperature units
     ^ enum: [celsius, fahrenheit]

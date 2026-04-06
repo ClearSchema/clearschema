@@ -4,8 +4,8 @@
 user: object.required: User profile
   # Basic fields
   name: string.required: Full name
-    ^ minLength: 2
-    ^ maxLength: 100
+    ^ min: 2
+    ^ max: 100
 
   email: string.required: Email address
     ^ format: email
@@ -22,5 +22,5 @@ user: object.required: User profile
   # Array of strings
   tags: array: User tags
     - string
-    ^ minItems: 0
-    ^ maxItems: 10
+    ^ min: 0
+    ^ max: 10

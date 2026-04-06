@@ -70,7 +70,7 @@ describe('Parser - Array Fields', () => {
         it('parses array with minItems', () => {
             const input = `tags: array: Tags
   - string
-  ^ minItems: 1`;
+  ^ min: 1`;
 
             const field = parseField(input) as ArrayField;
 
@@ -80,7 +80,7 @@ describe('Parser - Array Fields', () => {
         it('parses array with maxItems', () => {
             const input = `tags: array: Tags
   - string
-  ^ maxItems: 10`;
+  ^ max: 10`;
 
             const field = parseField(input) as ArrayField;
 
@@ -100,8 +100,8 @@ describe('Parser - Array Fields', () => {
         it('parses array with all modifiers', () => {
             const input = `tags: array: Tags
   - string
-  ^ minItems: 1
-  ^ maxItems: 10
+  ^ min: 1
+  ^ max: 10
   ^ uniqueItems: true`;
 
             const field = parseField(input) as ArrayField;
@@ -113,13 +113,30 @@ describe('Parser - Array Fields', () => {
 
         it('parses array with modifiers before item type', () => {
             const input = `tags: array: Tags
-  ^ minItems: 1
+  ^ min: 1
   - string`;
 
             const field = parseField(input) as ArrayField;
 
             expect(field.minItems).toBe(1);
             expect(field.itemType).toBe('string');
+        });
+    });
+
+    describe('array range shorthand', () => {
+        it('expands range on array to minItems and maxItems', () => {
+            const input = `tags: array: Tags\n  - string\n  ^ range: [1, 10]`;
+            const field = parseField(input) as ArrayField;
+            expect(field.minItems).toBe(1);
+            expect(field.maxItems).toBe(10);
+        });
+
+        it('rejects exclusiveRange on array (number/integer only)', () => {
+            const input = `tags: array: Tags\n  - string\n  ^ exclusiveRange: [0, 10]`;
+            expect(() => parseField(input)).toThrow();
+            try { parseField(input); } catch (e: any) {
+                expect(e.message).toContain('"exclusiveRange" is only valid on number/integer');
+            }
         });
     });
 
@@ -147,7 +164,7 @@ describe('Parser - Array Fields', () => {
   - object:
     name: string.required: Name
     email: string.required: Email
-  ^ minItems: 1`;
+  ^ min: 1`;
 
             const field = parseField(input) as ArrayField;
 
