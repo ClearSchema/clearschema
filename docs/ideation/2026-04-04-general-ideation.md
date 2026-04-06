@@ -66,7 +66,7 @@ focus: this project in general
 **Downsides:** Significant implementation effort. Must handle partial/invalid input gracefully.
 **Confidence:** 78%
 **Complexity:** High
-**Status:** Unexplored
+**Status:** Complete (PR #6, commit 40c3aa3) — LSP server with diagnostics, autocomplete, hover docs, go-to-definition, document symbols, VS Code extension client, 91 tests
 
 ### 5. Zod/Runtime Validator Exporter
 **Description:** Add a fifth exporter that emits Zod schemas from ClearSchema, giving TypeScript teams both static types and runtime validation from a single source of truth.
@@ -74,7 +74,7 @@ focus: this project in general
 **Downsides:** Adds a runtime dependency concern (Zod as peer dep). Must track Zod API changes.
 **Confidence:** 80%
 **Complexity:** Medium
-**Status:** Unexplored
+**Status:** Complete (PR #4, commit 50242db) — Zod v3 exporter with full AST type coverage, modifier-to-constraint mapping, 57 unit + 3 integration tests, CLI `-f zod` and programmatic API
 
 ### 6. JSON Schema Reverse Importer
 **Description:** Build `clearschema import schema.json` that reads existing JSON Schema and emits idiomatic `.cschema` files. Enable one-command adoption on existing projects.
@@ -82,7 +82,7 @@ focus: this project in general
 **Downsides:** JSON Schema is extremely permissive -- some valid schemas won't have clean ClearSchema equivalents.
 **Confidence:** 75%
 **Complexity:** Medium
-**Status:** Unexplored
+**Status:** Complete (PR #5, commit 935d218) — JSON Schema importer with draft auto-detection, ClearSchema serializer, CLI `import` subcommand, round-trip support, 465 tests
 
 ### 7. Map/Dictionary Type Support
 **Description:** Add a first-class `map<string, V>` type that compiles to JSON Schema `additionalProperties`, TypeScript `Record<K, V>`, and Pydantic `Dict[str, V]`.
@@ -120,3 +120,5 @@ focus: this project in general
 - 2026-04-04: Initial ideation -- 48 generated (6 agents x 8), inaccurate grounding led to "Credibility Reset" as #1
 - 2026-04-04: Re-ran ideation with verified codebase context -- all claimed features confirmed implemented. 48 new ideas generated, 26 unique + 3 cross-cutting = 29 evaluated, 7 survived. Corrected ranked list reflects actual project state.
 - 2026-04-04: Status update -- items #1 (Ship-Ready Bundle), #2 (Browser Playground), and #3 (LLM Exporter) completed. Remaining: #4 LSP, #5 Zod, #6 Reverse Importer, #7 Map/Dictionary.
+- 2026-04-05: Status update -- #5 (Zod Exporter) and #7 (Map/Dictionary) completed. 353 tests across 19 suites. Remaining: #4 LSP, #6 Reverse Importer.
+- 2026-04-05: Status update -- All 7 ranked ideas complete. #6 (Reverse Importer) shipped as v0.5.0 (PR #5), #4 (LSP Server) shipped as v0.6.0 (PR #6). 465+ tests across 23+ suites.

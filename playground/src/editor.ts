@@ -3,7 +3,7 @@ import { EditorState } from '@codemirror/state';
 import { ViewUpdate } from '@codemirror/view';
 import { clearschemaLanguage } from './clearschema-lang';
 
-let editorView: EditorView;
+let editorView: EditorView | null = null;
 
 export type OnChangeCallback = (content: string) => void;
 
@@ -38,15 +38,22 @@ export function createEditor(
 }
 
 export function getEditorContent(): string {
-  return editorView.state.doc.toString();
+  return editorView!.state.doc.toString();
 }
 
 export function setEditorContent(content: string): void {
-  editorView.dispatch({
+  editorView!.dispatch({
     changes: {
       from: 0,
-      to: editorView.state.doc.length,
+      to: editorView!.state.doc.length,
       insert: content,
     },
   });
+}
+
+export function destroyEditor(): void {
+  if (editorView) {
+    editorView.destroy();
+    editorView = null;
+  }
 }
