@@ -287,7 +287,7 @@ b: string: B`);
             // We need a schema that produces a oneOf with duplicate const values.
             // We'll use a minimal Schema object and manipulate the intermediate JSON Schema.
             const schema = parse(`a: string: placeholder`);
-            const result = exporter.export(schema);
+            exporter.export(schema);
 
             // Now test the internal logic indirectly: construct a node with duplicate consts
             // and verify it stays as oneOf by checking a full pipeline schema.
