@@ -214,6 +214,77 @@ b: string: B`);
         });
     });
 
+    describe('discriminated union (match) support', () => {
+        it('exports 2 variants as anyOf (not oneOf) with discriminator const preserved', () => {
+            const schema = parse(`payment: match(type): Payment method
+  credit_card:
+    cardNumber: string: Card number
+    expiry: string: Expiry
+  bank_transfer:
+    accountNumber: string: Account number
+    routingNumber: string: Routing number`);
+            const result = exportLlmSchema(schema);
+
+            const payment = result.schema.properties.payment;
+
+            // Must use anyOf, not oneOf
+            expect(payment.anyOf).toBeDefined();
+            expect(payment.oneOf).toBeUndefined();
+            expect(payment.anyOf).toHaveLength(2);
+
+            // Discriminator const must be preserved on each variant
+            const ccVariant = payment.anyOf[0];
+            expect(ccVariant.properties.type).toEqual({ const: 'credit_card' });
+
+            const btVariant = payment.anyOf[1];
+            expect(btVariant.properties.type).toEqual({ const: 'bank_transfer' });
+        });
+
+        it('each variant has additionalProperties: false and all properties required', () => {
+            const schema = parse(`event: match(kind): Event type
+  created:
+    createdAt: string: Timestamp
+  deleted:
+    deletedAt: string: Timestamp
+    reason: string: Reason`);
+            const result = exportLlmSchema(schema);
+
+            const event = result.schema.properties.event;
+            expect(event.anyOf).toHaveLength(2);
+
+            const createdVariant = event.anyOf[0];
+            expect(createdVariant.additionalProperties).toBe(false);
+            expect(createdVariant.required).toEqual(
+                expect.arrayContaining(['kind', 'createdAt'])
+            );
+            expect(createdVariant.required).toHaveLength(2);
+
+            const deletedVariant = event.anyOf[1];
+            expect(deletedVariant.additionalProperties).toBe(false);
+            expect(deletedVariant.required).toEqual(
+                expect.arrayContaining(['kind', 'deletedAt', 'reason'])
+            );
+            expect(deletedVariant.required).toHaveLength(3);
+        });
+
+        it('discriminator field is in required array of each variant', () => {
+            const schema = parse(`shape: match(shapeType): Shape
+  circle:
+    radius: number: Radius
+  rectangle:
+    width: number: Width
+    height: number: Height`);
+            const result = exportLlmSchema(schema);
+
+            const shape = result.schema.properties.shape;
+            expect(shape.anyOf).toBeDefined();
+
+            for (const variant of shape.anyOf) {
+                expect(variant.required).toContain('shapeType');
+            }
+        });
+    });
+
     describe('map field omission', () => {
         it('omits map field from output and emits warning', () => {
             const schema = parse(`metadata: map: Metadata

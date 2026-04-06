@@ -10,6 +10,7 @@ import {
     UnionField,
     RefField,
     CompositionField,
+    MatchField,
     FieldTypeName,
 } from '../ast/types';
 import { Exporter, ZodExportOptions } from './types';
@@ -90,6 +91,9 @@ export class ZodExporter implements Exporter<string> {
                 break;
             case 'ref':
                 base = this.exportRefType(field as RefField);
+                break;
+            case 'match':
+                base = this.exportMatchType(field as MatchField, includeDescriptions, depth);
                 break;
             case 'allOf':
             case 'anyOf':
@@ -291,6 +295,27 @@ export class ZodExporter implements Exporter<string> {
             return `${match[1]}Schema`;
         }
         return `${ref}Schema`;
+    }
+
+    private exportMatchType(field: MatchField, includeDescriptions: boolean, depth: number): string {
+        const variantSchemas: string[] = [];
+
+        for (const [key, variant] of Object.entries(field.variants)) {
+            if (variant.type === 'ref') {
+                const refSchema = this.exportRefType(variant as RefField);
+                variantSchemas.push(`${refSchema}.extend({ ${field.discriminator}: z.literal(${JSON.stringify(key)}) })`);
+            } else {
+                const objectField = variant as ObjectField;
+                const fields: string[] = [`${field.discriminator}: z.literal(${JSON.stringify(key)})`];
+                for (const childField of objectField.fields) {
+                    const zodType = this.exportFieldType(childField, includeDescriptions, depth + 1);
+                    fields.push(`${childField.name}: ${zodType}`);
+                }
+                variantSchemas.push(`z.object({ ${fields.join(', ')} })`);
+            }
+        }
+
+        return `z.discriminatedUnion(${JSON.stringify(field.discriminator)}, [${variantSchemas.join(', ')}])`;
     }
 
     private exportCompositionType(field: CompositionField, includeDescriptions: boolean, depth: number): string {

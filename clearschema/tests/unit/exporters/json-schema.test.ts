@@ -1,6 +1,6 @@
 import { parse } from '../../../src/parser/parser';
 import { exportJsonSchema } from '../../../src/exporters/json-schema';
-import { Schema, MapField, RefField } from '../../../src/ast/types';
+import { Schema, MapField, RefField, MatchField, ObjectField } from '../../../src/ast/types';
 
 describe('JSON Schema Exporter', () => {
     describe('primitive types', () => {
@@ -434,6 +434,148 @@ user: $ref: #/$defs/User`);
             const output = exportJsonSchema(schema, { includeDefaults: false });
 
             expect(output.properties?.name?.default).toBeUndefined();
+        });
+    });
+
+    describe('match (discriminated union)', () => {
+        const loc = { start: { line: 1, column: 0, offset: 0 }, end: { line: 1, column: 0, offset: 0 } };
+
+        function makeObjectVariant(fields: { name: string; type: string; required: boolean; description: string }[]): ObjectField {
+            return {
+                name: '',
+                type: 'object',
+                fields: fields.map(f => ({
+                    name: f.name,
+                    type: f.type as any,
+                    description: f.description,
+                    required: f.required,
+                    nullable: false,
+                    rawModifiers: {},
+                    modifiers: [],
+                    location: loc,
+                })),
+                description: '',
+                required: false,
+                nullable: false,
+                rawModifiers: {},
+                modifiers: [],
+                location: loc,
+            };
+        }
+
+        function makeMatchField(discriminator: string, variants: Record<string, ObjectField | RefField>, description = ''): MatchField {
+            return {
+                name: 'event',
+                type: 'match',
+                discriminator,
+                variants,
+                description,
+                required: false,
+                nullable: false,
+                rawModifiers: {},
+                modifiers: [],
+                location: loc,
+            };
+        }
+
+        function makeSchema(field: MatchField): Schema {
+            return {
+                fields: [field],
+                definitions: [],
+                imports: [],
+                location: loc,
+            };
+        }
+
+        it('exports 2 inline variants as oneOf with discriminator const in each', () => {
+            const matchField = makeMatchField('kind', {
+                created: makeObjectVariant([
+                    { name: 'createdAt', type: 'string', required: false, description: 'Timestamp' },
+                ]),
+                deleted: makeObjectVariant([
+                    { name: 'deletedAt', type: 'string', required: false, description: 'Timestamp' },
+                ]),
+            });
+
+            const output = exportJsonSchema(makeSchema(matchField));
+            const result = output.properties?.event;
+
+            expect(result?.oneOf).toHaveLength(2);
+            expect(result?.oneOf?.[0]).toEqual({
+                type: 'object',
+                properties: {
+                    createdAt: { type: 'string', description: 'Timestamp' },
+                    kind: { const: 'created' },
+                },
+                required: ['kind'],
+            });
+            expect(result?.oneOf?.[1]).toEqual({
+                type: 'object',
+                properties: {
+                    deletedAt: { type: 'string', description: 'Timestamp' },
+                    kind: { const: 'deleted' },
+                },
+                required: ['kind'],
+            });
+        });
+
+        it('exports $ref variant as bare $ref pointer in oneOf', () => {
+            const refVariant: RefField = {
+                name: '',
+                type: 'ref',
+                ref: '#/$defs/ExternalEvent',
+                description: '',
+                required: false,
+                nullable: false,
+                rawModifiers: {},
+                modifiers: [],
+                location: loc,
+            };
+
+            const matchField = makeMatchField('type', {
+                inline: makeObjectVariant([
+                    { name: 'data', type: 'string', required: false, description: 'Data' },
+                ]),
+                external: refVariant,
+            });
+
+            const output = exportJsonSchema(makeSchema(matchField));
+            const result = output.properties?.event;
+
+            expect(result?.oneOf).toHaveLength(2);
+            expect(result?.oneOf?.[0]?.properties?.type).toEqual({ const: 'inline' });
+            expect(result?.oneOf?.[1]).toEqual({ $ref: '#/$defs/ExternalEvent' });
+        });
+
+        it('includes discriminator in required array alongside existing required fields', () => {
+            const matchField = makeMatchField('kind', {
+                created: makeObjectVariant([
+                    { name: 'createdAt', type: 'string', required: true, description: 'Timestamp' },
+                ]),
+            });
+
+            const output = exportJsonSchema(makeSchema(matchField));
+            const variant = output.properties?.event?.oneOf?.[0];
+
+            expect(variant?.required).toContain('createdAt');
+            expect(variant?.required).toContain('kind');
+        });
+
+        it('exports variant with no additional fields as valid minimal object', () => {
+            const matchField = makeMatchField('status', {
+                empty: makeObjectVariant([]),
+            });
+
+            const output = exportJsonSchema(makeSchema(matchField));
+            const variant = output.properties?.event?.oneOf?.[0];
+
+            expect(variant).toEqual({
+                type: 'object',
+                properties: {
+                    status: { const: 'empty' },
+                },
+                required: ['status'],
+            });
         });
     });
 

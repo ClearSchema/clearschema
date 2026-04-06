@@ -1,6 +1,6 @@
 import { parse } from '../../../src/parser/parser';
 import { exportTypeScript } from '../../../src/exporters/typescript';
-import { Schema, MapField, ArrayField, RefField } from '../../../src/ast/types';
+import { Schema, MapField, ArrayField, RefField, ObjectField, MatchField } from '../../../src/ast/types';
 
 describe('TypeScript Exporter', () => {
     describe('primitive types', () => {
@@ -291,6 +291,164 @@ payment: oneOf: Payment
             const output = exportTypeScript(schema);
 
             expect(output).toMatch(/\|/); // Has union operator
+        });
+    });
+
+    describe('match (discriminated union) types', () => {
+        const loc = { start: { line: 1, column: 1, offset: 0 }, end: { line: 1, column: 1, offset: 0 } };
+
+        it('exports 2 variants as discriminated union with literal type on discriminator field', () => {
+            const schema: Schema = {
+                location: loc,
+                imports: [],
+                definitions: [],
+                fields: [{
+                    name: 'payment',
+                    type: 'match',
+                    description: 'Payment method',
+                    required: true,
+                    nullable: false,
+                    rawModifiers: {},
+                    modifiers: [],
+                    location: loc,
+                    discriminator: 'type',
+                    variants: {
+                        credit_card: {
+                            name: '',
+                            type: 'object',
+                            description: '',
+                            required: true,
+                            nullable: false,
+                            rawModifiers: {},
+                            modifiers: [],
+                            location: loc,
+                            fields: [{
+                                name: 'cardNumber',
+                                type: 'string',
+                                description: '',
+                                required: true,
+                                nullable: false,
+                                rawModifiers: {},
+                                modifiers: [],
+                                location: loc,
+                            } as any],
+                        } as ObjectField,
+                        bank_transfer: {
+                            name: '',
+                            type: 'object',
+                            description: '',
+                            required: true,
+                            nullable: false,
+                            rawModifiers: {},
+                            modifiers: [],
+                            location: loc,
+                            fields: [{
+                                name: 'accountNumber',
+                                type: 'string',
+                                description: '',
+                                required: true,
+                                nullable: false,
+                                rawModifiers: {},
+                                modifiers: [],
+                                location: loc,
+                            } as any],
+                        } as ObjectField,
+                    },
+                } as MatchField],
+            };
+            const output = exportTypeScript(schema);
+
+            expect(output).toContain("type: 'credit_card'; cardNumber: string");
+            expect(output).toContain("type: 'bank_transfer'; accountNumber: string");
+            expect(output).toContain(' | ');
+        });
+
+        it('exports variant with optional fields', () => {
+            const schema: Schema = {
+                location: loc,
+                imports: [],
+                definitions: [],
+                fields: [{
+                    name: 'event',
+                    type: 'match',
+                    description: '',
+                    required: true,
+                    nullable: false,
+                    rawModifiers: {},
+                    modifiers: [],
+                    location: loc,
+                    discriminator: 'kind',
+                    variants: {
+                        click: {
+                            name: '',
+                            type: 'object',
+                            description: '',
+                            required: true,
+                            nullable: false,
+                            rawModifiers: {},
+                            modifiers: [],
+                            location: loc,
+                            fields: [{
+                                name: 'x',
+                                type: 'number',
+                                description: '',
+                                required: true,
+                                nullable: false,
+                                rawModifiers: {},
+                                modifiers: [],
+                                location: loc,
+                            } as any, {
+                                name: 'label',
+                                type: 'string',
+                                description: '',
+                                required: false,
+                                nullable: false,
+                                rawModifiers: {},
+                                modifiers: [],
+                                location: loc,
+                            } as any],
+                        } as ObjectField,
+                    },
+                } as MatchField],
+            };
+            const output = exportTypeScript(schema);
+
+            expect(output).toContain("kind: 'click'; x: number; label?: string");
+        });
+
+        it('exports $ref variant as intersection with literal discriminator', () => {
+            const schema: Schema = {
+                location: loc,
+                imports: [],
+                definitions: [],
+                fields: [{
+                    name: 'shape',
+                    type: 'match',
+                    description: '',
+                    required: true,
+                    nullable: false,
+                    rawModifiers: {},
+                    modifiers: [],
+                    location: loc,
+                    discriminator: 'kind',
+                    variants: {
+                        circle: {
+                            name: '',
+                            type: 'ref',
+                            ref: '#/$defs/Circle',
+                            description: '',
+                            required: true,
+                            nullable: false,
+                            rawModifiers: {},
+                            modifiers: [],
+                            location: loc,
+                        } as RefField,
+                    },
+                } as MatchField],
+            };
+            const output = exportTypeScript(schema);
+
+            expect(output).toContain("{ kind: 'circle' } & Circle");
         });
     });
 

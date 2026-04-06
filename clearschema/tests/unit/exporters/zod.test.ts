@@ -1,6 +1,6 @@
 import { parse } from '../../../src/parser/parser';
 import { exportZod } from '../../../src/exporters/zod';
-import { Schema, MapField, ArrayField, RefField, ObjectField, CompositionField } from '../../../src/ast/types';
+import { Schema, MapField, ArrayField, RefField, ObjectField, CompositionField, MatchField } from '../../../src/ast/types';
 
 describe('Zod Exporter', () => {
     describe('import statement', () => {
@@ -665,6 +665,123 @@ admin: allOf: Admin
 
             expect(output).toContain('UserSchema');
             expect(output).toContain('z.intersection(');
+        });
+    });
+
+    describe('match (discriminated union) types', () => {
+        const loc = { start: { line: 1, column: 1, offset: 0 }, end: { line: 1, column: 1, offset: 0 } };
+
+        it('exports 2 variants as z.discriminatedUnion with z.literal', () => {
+            const schema: Schema = {
+                location: loc,
+                imports: [],
+                definitions: [],
+                fields: [{
+                    name: 'payment',
+                    type: 'match',
+                    description: '',
+                    required: true,
+                    nullable: false,
+                    rawModifiers: {},
+                    modifiers: [],
+                    location: loc,
+                    discriminator: 'type',
+                    variants: {
+                        credit_card: {
+                            name: '',
+                            type: 'object',
+                            description: '',
+                            required: true,
+                            nullable: false,
+                            rawModifiers: {},
+                            modifiers: [],
+                            location: loc,
+                            fields: [{
+                                name: 'cardNumber',
+                                type: 'string',
+                                description: '',
+                                required: true,
+                                nullable: false,
+                                rawModifiers: {},
+                                modifiers: [],
+                                location: loc,
+                            } as any],
+                        } as ObjectField,
+                        bank_transfer: {
+                            name: '',
+                            type: 'object',
+                            description: '',
+                            required: true,
+                            nullable: false,
+                            rawModifiers: {},
+                            modifiers: [],
+                            location: loc,
+                            fields: [{
+                                name: 'accountNumber',
+                                type: 'string',
+                                description: '',
+                                required: true,
+                                nullable: false,
+                                rawModifiers: {},
+                                modifiers: [],
+                                location: loc,
+                            } as any],
+                        } as ObjectField,
+                    },
+                } as MatchField],
+            };
+            const output = exportZod(schema);
+
+            expect(output).toContain('z.discriminatedUnion("type"');
+            expect(output).toContain('z.literal("credit_card")');
+            expect(output).toContain('z.literal("bank_transfer")');
+            expect(output).toContain('cardNumber: z.string()');
+            expect(output).toContain('accountNumber: z.string()');
+        });
+
+        it('exports variant with description using .describe()', () => {
+            const schema: Schema = {
+                location: loc,
+                imports: [],
+                definitions: [],
+                fields: [{
+                    name: 'payment',
+                    type: 'match',
+                    description: 'Payment method',
+                    required: true,
+                    nullable: false,
+                    rawModifiers: {},
+                    modifiers: [],
+                    location: loc,
+                    discriminator: 'type',
+                    variants: {
+                        credit_card: {
+                            name: '',
+                            type: 'object',
+                            description: '',
+                            required: true,
+                            nullable: false,
+                            rawModifiers: {},
+                            modifiers: [],
+                            location: loc,
+                            fields: [{
+                                name: 'cardNumber',
+                                type: 'string',
+                                description: '',
+                                required: true,
+                                nullable: false,
+                                rawModifiers: {},
+                                modifiers: [],
+                                location: loc,
+                            } as any],
+                        } as ObjectField,
+                    },
+                } as MatchField],
+            };
+            const output = exportZod(schema);
+
+            expect(output).toContain('z.discriminatedUnion("type"');
+            expect(output).toContain('.describe("Payment method")');
         });
     });
 

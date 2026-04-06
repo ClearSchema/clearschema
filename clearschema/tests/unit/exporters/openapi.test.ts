@@ -1,5 +1,6 @@
 import { parse } from '../../../src/parser/parser';
 import { exportOpenAPI } from '../../../src/exporters/openapi';
+import { Schema, MatchField, ObjectField, RefField } from '../../../src/ast/types';
 
 describe('OpenAPI Exporter', () => {
     it('exports basic OpenAPI structure', () => {
@@ -82,5 +83,105 @@ users: array.required: Users
         expect(output.components.schemas.User).toBeDefined();
         expect(output.components.schemas.Address).toBeDefined();
         expect(output.servers).toBeDefined();
+    });
+
+    describe('match (discriminated union)', () => {
+        const loc = { start: { line: 1, column: 0, offset: 0 }, end: { line: 1, column: 0, offset: 0 } };
+
+        function makeObjectVariant(fields: { name: string; type: string; required: boolean; description: string }[]): ObjectField {
+            return {
+                name: '',
+                type: 'object',
+                fields: fields.map(f => ({
+                    name: f.name,
+                    type: f.type as any,
+                    description: f.description,
+                    required: f.required,
+                    nullable: false,
+                    rawModifiers: {},
+                    modifiers: [],
+                    location: loc,
+                })),
+                description: '',
+                required: false,
+                nullable: false,
+                rawModifiers: {},
+                modifiers: [],
+                location: loc,
+            };
+        }
+
+        function makeMatchField(discriminator: string, variants: Record<string, ObjectField | RefField>, description = ''): MatchField {
+            return {
+                name: 'event',
+                type: 'match',
+                discriminator,
+                variants,
+                description,
+                required: true,
+                nullable: false,
+                rawModifiers: {},
+                modifiers: [],
+                location: loc,
+            };
+        }
+
+        function makeSchema(field: MatchField): Schema {
+            return {
+                fields: [field],
+                definitions: [],
+                imports: [],
+                location: loc,
+            } as any;
+        }
+
+        it('injects discriminator annotation alongside oneOf for match field', () => {
+            const matchField = makeMatchField('type', {
+                created: makeObjectVariant([
+                    { name: 'createdAt', type: 'string', required: false, description: 'Timestamp' },
+                ]),
+                deleted: makeObjectVariant([
+                    { name: 'deletedAt', type: 'string', required: false, description: 'Timestamp' },
+                ]),
+            });
+
+            const output = exportOpenAPI(makeSchema(matchField));
+            const rootSchema = output.components.schemas.RootSchema;
+
+            expect(rootSchema).toBeDefined();
+            expect(rootSchema.properties.event.oneOf).toHaveLength(2);
+            expect(rootSchema.properties.event.discriminator).toEqual({
+                propertyName: 'type',
+            });
+        });
+
+        it('injects discriminator for match field with $ref variant', () => {
+            const refVariant: RefField = {
+                name: '',
+                type: 'ref',
+                ref: '#/$defs/ExternalEvent',
+                description: '',
+                required: false,
+                nullable: false,
+                rawModifiers: {},
+                modifiers: [],
+                location: loc,
+            };
+
+            const matchField = makeMatchField('kind', {
+                inline: makeObjectVariant([
+                    { name: 'data', type: 'string', required: true, description: 'Data' },
+                ]),
+                external: refVariant,
+            });
+
+            const output = exportOpenAPI(makeSchema(matchField));
+            const rootSchema = output.components.schemas.RootSchema;
+
+            expect(rootSchema.properties.event.oneOf).toHaveLength(2);
+            expect(rootSchema.properties.event.discriminator).toEqual({
+                propertyName: 'kind',
+            });
+        });
     });
 });

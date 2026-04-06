@@ -1,4 +1,4 @@
-import { Schema } from '../ast/types';
+import { Schema, MatchField, Field } from '../ast/types';
 import { Exporter, ExportOptions } from './types';
 import { exportJsonSchema } from './json-schema';
 
@@ -77,7 +77,46 @@ export class OpenAPIExporter implements Exporter<OpenAPISchema> {
             };
         }
 
+        // Inject discriminator annotations for MatchField nodes
+        this.injectDiscriminators(schema, openapi);
+
         return openapi;
+    }
+    private injectDiscriminators(schema: Schema, openapi: OpenAPISchema): void {
+        // Process root fields
+        for (const field of schema.fields) {
+            this.injectDiscriminatorForField(field, openapi.components.schemas.RootSchema?.properties);
+        }
+
+        // Process definitions
+        for (const def of schema.definitions) {
+            if (def.field.type === 'object') {
+                const schemaObj = openapi.components.schemas[def.name];
+                if (schemaObj?.properties) {
+                    for (const childField of (def.field as any).fields) {
+                        this.injectDiscriminatorForField(childField, schemaObj.properties);
+                    }
+                }
+            } else if (def.field.type === 'match') {
+                const matchField = def.field as MatchField;
+                const schemaObj = openapi.components.schemas[def.name];
+                if (schemaObj?.oneOf) {
+                    schemaObj.discriminator = { propertyName: matchField.discriminator };
+                }
+            }
+        }
+    }
+
+    private injectDiscriminatorForField(field: Field, properties?: Record<string, any>): void {
+        if (!properties) return;
+
+        if (field.type === 'match') {
+            const matchField = field as MatchField;
+            const prop = properties[field.name];
+            if (prop?.oneOf) {
+                prop.discriminator = { propertyName: matchField.discriminator };
+            }
+        }
     }
 }
 

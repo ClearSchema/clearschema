@@ -307,6 +307,22 @@ const COMPOSITION_DOCS: Record<string, string> = {
     allOf: '**allOf** — the value must match *all* of the listed schemas.',
     anyOf: '**anyOf** — the value must match *at least one* of the listed schemas.',
     oneOf: '**oneOf** — the value must match *exactly one* of the listed schemas.',
+    match: [
+        '**match(discriminatorField)**',
+        '',
+        'Discriminated union that selects a sub-schema based on the value of a discriminator property.',
+        '',
+        '**Syntax:**',
+        '```clearschema',
+        'pet: match(type): A pet',
+        '  dog:',
+        '    breed: string.required: Dog breed',
+        '  cat:',
+        '    indoor: boolean: Indoor cat?',
+        '```',
+        '',
+        'Each variant key maps to a distinct sub-schema. The discriminator field value determines which variant applies.',
+    ].join('\n'),
 };
 
 // ---------------------------------------------------------------------------

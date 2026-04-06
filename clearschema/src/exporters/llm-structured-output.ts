@@ -61,8 +61,14 @@ export class LlmSchemaExporter implements Exporter<LlmSchemaResult> {
         // Set additionalProperties: false on all objects and ensure all props in required
         this.enforceStrictObjects(result, warnings);
 
-        // Strip unsupported keywords
+        // Convert discriminated union oneOf → anyOf and mark discriminator const values
+        this.convertDiscriminatedUnions(result);
+
+        // Strip unsupported keywords (preserves marked discriminator const)
         this.stripUnsupportedKeywords(result, '', warnings);
+
+        // Clean up discriminator markers
+        this.removeDiscriminatorMarkers(result);
 
         // Validate nesting depth
         const depth = this.measureObjectDepth(result, 0);
@@ -267,6 +273,10 @@ export class LlmSchemaExporter implements Exporter<LlmSchemaResult> {
 
         for (const keyword of UNSUPPORTED_KEYWORDS) {
             if (keyword in node) {
+                // Preserve const on discriminator properties (marked by convertDiscriminatedUnions)
+                if (keyword === 'const' && node.__discriminatorConst) {
+                    continue;
+                }
                 const fieldPath = path || 'root';
                 warnings.push(`Dropped '${keyword}' constraint from ${fieldPath}`);
                 delete node[keyword];
@@ -277,6 +287,99 @@ export class LlmSchemaExporter implements Exporter<LlmSchemaResult> {
         for (const key of Object.keys(node)) {
             const childPath = path ? `${path}.${key}` : key;
             this.stripUnsupportedKeywords(node[key], childPath, warnings);
+        }
+    }
+
+    /**
+     * Detect discriminated unions (oneOf where variants share a property with const values)
+     * and convert them to anyOf. Mark discriminator const properties so they survive stripping.
+     */
+    private convertDiscriminatedUnions(node: any): void {
+        if (node === null || node === undefined || typeof node !== 'object') {
+            return;
+        }
+
+        if (Array.isArray(node)) {
+            for (const item of node) {
+                this.convertDiscriminatedUnions(item);
+            }
+            return;
+        }
+
+        // Check if this node has a oneOf that looks like a discriminated union
+        if (Array.isArray(node.oneOf) && node.oneOf.length >= 2) {
+            const discriminator = this.findDiscriminatorProperty(node.oneOf);
+            if (discriminator) {
+                // Convert oneOf to anyOf
+                node.anyOf = node.oneOf;
+                delete node.oneOf;
+
+                // Mark discriminator const properties so they survive stripping
+                for (const variant of node.anyOf) {
+                    if (variant.properties && variant.properties[discriminator]) {
+                        const discProp = variant.properties[discriminator];
+                        if (discProp.const !== undefined) {
+                            discProp.__discriminatorConst = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Recurse into all values
+        for (const key of Object.keys(node)) {
+            this.convertDiscriminatedUnions(node[key]);
+        }
+    }
+
+    /**
+     * Find a shared property name across all variants that uses const values (discriminator).
+     * Returns the property name if found, null otherwise.
+     */
+    private findDiscriminatorProperty(variants: any[]): string | null {
+        // All variants must be objects with properties
+        if (!variants.every((v) => v.properties && typeof v.properties === 'object')) {
+            return null;
+        }
+
+        // Find property names that exist in ALL variants and have const in ALL
+        const firstProps = Object.keys(variants[0].properties);
+        for (const propName of firstProps) {
+            const prop = variants[0].properties[propName];
+            if (prop && prop.const !== undefined) {
+                const allHaveConst = variants.every(
+                    (v) => v.properties[propName] && v.properties[propName].const !== undefined
+                );
+                if (allHaveConst) {
+                    return propName;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Remove __discriminatorConst markers from the schema after stripping is complete.
+     */
+    private removeDiscriminatorMarkers(node: any): void {
+        if (node === null || node === undefined || typeof node !== 'object') {
+            return;
+        }
+
+        if (Array.isArray(node)) {
+            for (const item of node) {
+                this.removeDiscriminatorMarkers(item);
+            }
+            return;
+        }
+
+        if ('__discriminatorConst' in node) {
+            delete node.__discriminatorConst;
+        }
+
+        for (const key of Object.keys(node)) {
+            this.removeDiscriminatorMarkers(node[key]);
         }
     }
 

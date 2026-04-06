@@ -12,6 +12,7 @@ import {
     UnionField,
     RefField,
     CompositionField,
+    MatchField,
     SourceLocation,
 } from '../../../src/ast/types';
 
@@ -144,6 +145,22 @@ function makeUnionField(name: string, types: string[], opts: Partial<UnionField>
         types: types as any,
         ...opts,
     } as UnionField;
+}
+
+function makeMatchField(name: string, discriminator: string, variants: Record<string, ObjectField | RefField>, opts: Partial<MatchField> = {}): MatchField {
+    return {
+        name,
+        type: 'match',
+        description: opts.description ?? '',
+        required: opts.required ?? false,
+        nullable: opts.nullable ?? false,
+        rawModifiers: {},
+        modifiers: [],
+        location: loc,
+        discriminator,
+        variants,
+        ...opts,
+    } as MatchField;
 }
 
 function makeCompositionField(name: string, compositionType: 'allOf' | 'anyOf' | 'oneOf', schemas: (Field | RefField)[], opts: Partial<CompositionField> = {}): CompositionField {
@@ -664,6 +681,55 @@ describe('ClearSchema Serializer', () => {
         });
     });
 
+    describe('match fields', () => {
+        it('serializes match field with inline object variants', () => {
+            const schema = makeSchema([
+                makeMatchField('event', 'type', {
+                    click: makeObjectField('click', [
+                        makeNumberField('x', { required: true, description: 'X coordinate' }),
+                        makeNumberField('y', { required: true, description: 'Y coordinate' }),
+                    ]),
+                    keypress: makeObjectField('keypress', [
+                        makeStringField('key', { required: true, description: 'Key pressed' }),
+                    ]),
+                }, { description: 'UI event' }),
+            ]);
+            const output = exportClearSchema(schema);
+
+            expect(output).toContain('event: match(type): UI event');
+            expect(output).toContain('  click:');
+            expect(output).toContain('    x: number.required: X coordinate');
+            expect(output).toContain('    y: number.required: Y coordinate');
+            expect(output).toContain('  keypress:');
+            expect(output).toContain('    key: string.required: Key pressed');
+        });
+
+        it('serializes match field with $ref variants', () => {
+            const schema = makeSchema([
+                makeMatchField('shape', 'kind', {
+                    circle: makeRefField('circle', '#/$defs/Circle'),
+                    square: makeRefField('square', '#/$defs/Square'),
+                }, { description: 'A shape' }),
+            ]);
+            const output = exportClearSchema(schema);
+
+            expect(output).toContain('shape: match(kind): A shape');
+            expect(output).toContain('  circle: $ref: #/$defs/Circle');
+            expect(output).toContain('  square: $ref: #/$defs/Square');
+        });
+
+        it('serializes match field with required and nullable', () => {
+            const schema = makeSchema([
+                makeMatchField('data', 'type', {
+                    a: makeObjectField('a', [makeStringField('val', {})]),
+                }, { required: true, nullable: true }),
+            ]);
+            const output = exportClearSchema(schema);
+
+            expect(output).toContain('data: match(type).required.nullable');
+        });
+    });
+
     describe('round-trip with parser', () => {
         it('round-trips a simple schema through serialize -> parse', () => {
             const original = makeSchema([
@@ -761,6 +827,41 @@ describe('ClearSchema Serializer', () => {
 
             const field = reparsed.fields[0];
             expect(field.enum).toEqual(['pending', 'processing', 'shipped']);
+        });
+
+        it('round-trips match fields through serialize -> parse', () => {
+            const original = makeSchema([
+                makeMatchField('event', 'type', {
+                    click: makeObjectField('click', [
+                        makeNumberField('x', { required: true, description: 'X coordinate' }),
+                        makeNumberField('y', { required: true, description: 'Y coordinate' }),
+                    ]),
+                    keypress: makeObjectField('keypress', [
+                        makeStringField('key', { required: true, description: 'Key pressed' }),
+                    ]),
+                }, { description: 'UI event' }),
+            ]);
+
+            const clearText = exportClearSchema(original);
+            const reparsed = parse(clearText);
+
+            expect(reparsed.fields.length).toBe(1);
+            const event = reparsed.fields[0] as MatchField;
+            expect(event.type).toBe('match');
+            expect(event.discriminator).toBe('type');
+            expect(event.description).toBe('UI event');
+            expect(Object.keys(event.variants)).toEqual(['click', 'keypress']);
+
+            const click = event.variants['click'] as ObjectField;
+            expect(click.type).toBe('object');
+            expect(click.fields.length).toBe(2);
+            expect(click.fields[0].name).toBe('x');
+            expect(click.fields[1].name).toBe('y');
+
+            const keypress = event.variants['keypress'] as ObjectField;
+            expect(keypress.type).toBe('object');
+            expect(keypress.fields.length).toBe(1);
+            expect(keypress.fields[0].name).toBe('key');
         });
 
         it('round-trips the ecommerce example pattern', () => {

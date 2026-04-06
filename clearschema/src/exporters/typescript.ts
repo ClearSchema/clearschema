@@ -8,6 +8,7 @@ import {
     UnionField,
     RefField,
     CompositionField,
+    MatchField,
 } from '../ast/types';
 import { Exporter, ExportOptions } from './types';
 
@@ -121,6 +122,9 @@ export class TypeScriptExporter implements Exporter<string> {
             case 'ref':
                 baseType = this.exportRefType(field as RefField);
                 break;
+            case 'match':
+                baseType = this.exportMatchType(field as MatchField, options);
+                break;
             case 'allOf':
             case 'anyOf':
             case 'oneOf':
@@ -197,6 +201,28 @@ export class TypeScriptExporter implements Exporter<string> {
             return match[1];
         }
         return ref;
+    }
+
+    private exportMatchType(field: MatchField, options?: TypeScriptExportOptions): string {
+        const variants: string[] = [];
+
+        for (const [key, variant] of Object.entries(field.variants)) {
+            if (variant.type === 'ref') {
+                const refType = this.exportRefType(variant as RefField);
+                variants.push(`{ ${field.discriminator}: '${key}' } & ${refType}`);
+            } else {
+                const objectField = variant as ObjectField;
+                const fields: string[] = [`${field.discriminator}: '${key}'`];
+                for (const childField of objectField.fields) {
+                    const optional = !childField.required ? '?' : '';
+                    const fieldType = this.exportFieldType(childField, options);
+                    fields.push(`${childField.name}${optional}: ${fieldType}`);
+                }
+                variants.push(`{ ${fields.join('; ')} }`);
+            }
+        }
+
+        return variants.join(' | ');
     }
 
     private exportCompositionType(field: CompositionField, options?: TypeScriptExportOptions): string {

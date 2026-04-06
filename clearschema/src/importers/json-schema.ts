@@ -13,6 +13,7 @@ import {
     UnionField,
     RefField,
     CompositionField,
+    MatchField,
     SchemaDefinition,
     SourceLocation,
     Modifier,
@@ -209,6 +210,17 @@ export class JsonSchemaImporter {
             return this.importComposition(name, obj, 'allOf');
         }
         if (Array.isArray(obj.oneOf)) {
+            // Tier 1: Explicit OpenAPI discriminator annotation
+            if (obj.discriminator?.propertyName) {
+                return this.importDiscriminatedUnion(name, obj, obj.discriminator.propertyName);
+            }
+
+            // Tier 2: All variants share a property with a const value
+            const sharedProp = this.findSharedConstProperty(obj.oneOf);
+            if (sharedProp) {
+                return this.importDiscriminatedUnion(name, obj, sharedProp);
+            }
+
             return this.importComposition(name, obj, 'oneOf');
         }
 
@@ -524,6 +536,113 @@ export class JsonSchemaImporter {
             schemas,
             ...this.universalModifiers(obj),
         };
+    }
+
+    // -----------------------------------------------------------------------
+    // Discriminated union (match)
+    // -----------------------------------------------------------------------
+
+    private findSharedConstProperty(variants: any[]): string | null {
+        if (variants.length === 0) return null;
+
+        // Only consider variants that are inline objects with properties
+        for (const variant of variants) {
+            if (
+                variant == null ||
+                typeof variant !== 'object' ||
+                variant.$ref !== undefined ||
+                variant.properties == null ||
+                typeof variant.properties !== 'object'
+            ) {
+                return null;
+            }
+        }
+
+        // Find a property name present in ALL variants with a const value
+        const firstProps = Object.keys(variants[0].properties);
+        for (const propName of firstProps) {
+            const propSchema = variants[0].properties[propName];
+            const hasConst =
+                propSchema?.const !== undefined ||
+                (Array.isArray(propSchema?.enum) && propSchema.enum.length === 1);
+
+            if (!hasConst) continue;
+
+            const allMatch = variants.every((v: any) => {
+                const p = v.properties?.[propName];
+                if (!p) return false;
+                return (
+                    p.const !== undefined ||
+                    (Array.isArray(p.enum) && p.enum.length === 1)
+                );
+            });
+
+            if (allMatch) return propName;
+        }
+
+        return null;
+    }
+
+    private importDiscriminatedUnion(
+        name: string,
+        obj: any,
+        discriminatorField: string,
+    ): MatchField {
+        const elements: any[] = obj.oneOf;
+        const variants: Record<string, ObjectField | RefField> = {};
+
+        for (const element of elements) {
+            if (element.$ref !== undefined) {
+                // $ref variant — we cannot extract the const key, use the ref basename
+                const ref = this.importRef(name, element);
+                const baseName = ref.ref.split('/').pop() ?? ref.ref;
+                variants[baseName] = ref;
+                continue;
+            }
+
+            // Extract variant key from discriminator property
+            const discProp = element.properties?.[discriminatorField];
+            let variantKey: string;
+            if (discProp?.const !== undefined) {
+                variantKey = String(discProp.const);
+            } else if (Array.isArray(discProp?.enum) && discProp.enum.length === 1) {
+                variantKey = String(discProp.enum[0]);
+            } else {
+                // Cannot determine variant key, fall through to composition
+                return {
+                    ...createBaseField(name, 'match', obj.description ?? ''),
+                    type: 'match',
+                    discriminator: discriminatorField,
+                    variants,
+                    ...this.universalModifiers(obj),
+                } as MatchField;
+            }
+
+            // Import the variant schema as an object, stripping the discriminator property
+            const strippedProperties = { ...element.properties };
+            delete strippedProperties[discriminatorField];
+
+            const strippedRequired = Array.isArray(element.required)
+                ? element.required.filter((r: string) => r !== discriminatorField)
+                : [];
+
+            const strippedElement = {
+                ...element,
+                properties: strippedProperties,
+                required: strippedRequired,
+            };
+
+            const imported = this.importObject(variantKey, strippedElement);
+            variants[variantKey] = imported;
+        }
+
+        return {
+            ...createBaseField(name, 'match', obj.description ?? ''),
+            type: 'match',
+            discriminator: discriminatorField,
+            variants,
+            ...this.universalModifiers(obj),
+        } as MatchField;
     }
 
     // -----------------------------------------------------------------------

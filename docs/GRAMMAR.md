@@ -32,12 +32,16 @@ field           = field_name , ":" , field_type , [ ".required" ] , [ ".nullable
 
 (* Field Components *)
 field_name      = identifier ;
-field_type      = primitive_type | complex_type | union_type | reference_type | composition_type ;
+field_type      = primitive_type | complex_type | union_type | reference_type | composition_type | match_type ;
 primitive_type  = "string" | "number" | "integer" | "boolean" | "null" ;
 complex_type    = "object" | "array" | "array.tuple" | "map" ;
 union_type      = field_type , { "|" , field_type } ;
 reference_type  = "$ref" ;
 composition_type = "allOf" | "anyOf" | "oneOf" ;  (* "extends" reserved for future use *)
+match_type       = "match" , "(" , identifier , ")" ;
+match_block      = field_name , ":" , match_type , [ ":" , description ] ;
+variant_block    = variant_key , ":" ;
+variant_key      = identifier ;
 description     = { any_char_except_newline } ;
 
 (* Modifiers *)
@@ -220,6 +224,35 @@ adminUser: allOf: Admin user with extra permissions
         ^ enum: [read, write, delete, admin]
 ```
 
+### Match / Discriminated Union
+
+A `match` block selects a sub-schema based on the value of a discriminator property.
+
+**Inline variants:**
+
+```yaml
+pet: match(type): A pet
+  dog:
+    breed: string.required: Dog breed
+    friendly: boolean: Is friendly?
+  cat:
+    indoor: boolean: Indoor cat?
+```
+
+**Variants using `$ref`:**
+
+```yaml
+$defs:
+  Dog: object: A dog
+    breed: string.required: Dog breed
+  Cat: object: A cat
+    indoor: boolean: Indoor cat?
+
+pet: match(type): A pet
+  dog: $ref: #/$defs/Dog
+  cat: $ref: #/$defs/Cat
+```
+
 ### External Imports
 
 ```yaml
@@ -349,6 +382,7 @@ The following are reserved and cannot be used as field names:
 - `allOf`
 - `anyOf`
 - `oneOf`
+- `match`
 - `extends` (reserved for future use)
 
 ---

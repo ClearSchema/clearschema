@@ -1,5 +1,6 @@
 import { parse } from '../../../src/parser/parser';
 import { exportPydantic } from '../../../src/exporters/pydantic';
+import { Schema, MatchField, ObjectField, RefField } from '../../../src/ast/types';
 
 describe('Pydantic Exporter', () => {
     describe('primitive types', () => {
@@ -258,6 +259,115 @@ describe('Pydantic Exporter', () => {
 
             expect(output).toContain('Dict[str, Address]');
             expect(output).toContain('from typing import Dict');
+        });
+    });
+
+    describe('match (discriminated union)', () => {
+        const loc = { start: { line: 1, column: 0, offset: 0 }, end: { line: 1, column: 0, offset: 0 } };
+
+        function makeObjectVariant(fields: { name: string; type: string; required: boolean; description: string }[]): ObjectField {
+            return {
+                name: '',
+                type: 'object',
+                fields: fields.map(f => ({
+                    name: f.name,
+                    type: f.type as any,
+                    description: f.description,
+                    required: f.required,
+                    nullable: false,
+                    rawModifiers: {},
+                    modifiers: [],
+                    location: loc,
+                })),
+                description: '',
+                required: false,
+                nullable: false,
+                rawModifiers: {},
+                modifiers: [],
+                location: loc,
+            };
+        }
+
+        function makeMatchField(discriminator: string, variants: Record<string, ObjectField | RefField>, description = ''): MatchField {
+            return {
+                name: 'event',
+                type: 'match',
+                discriminator,
+                variants,
+                description,
+                required: true,
+                nullable: false,
+                rawModifiers: {},
+                modifiers: [],
+                location: loc,
+            };
+        }
+
+        function makeSchema(field: MatchField): Schema {
+            return {
+                fields: [field],
+                definitions: [],
+                imports: [],
+                location: loc,
+            } as any;
+        }
+
+        it('exports 2 inline variants as model classes with Literal type and Annotated union', () => {
+            const matchField = makeMatchField('kind', {
+                created: makeObjectVariant([
+                    { name: 'createdAt', type: 'string', required: false, description: 'Timestamp' },
+                ]),
+                deleted: makeObjectVariant([
+                    { name: 'deletedAt', type: 'string', required: false, description: 'Timestamp' },
+                ]),
+            });
+
+            const output = exportPydantic(makeSchema(matchField));
+
+            // Should have variant model classes
+            expect(output).toContain('class CreatedVariant(BaseModel):');
+            expect(output).toContain("kind: Literal['created']");
+            expect(output).toContain('createdAt: Optional[str] = None');
+            expect(output).toContain('class DeletedVariant(BaseModel):');
+            expect(output).toContain("kind: Literal['deleted']");
+            expect(output).toContain('deletedAt: Optional[str] = None');
+
+            // Should have Annotated union with Discriminator
+            expect(output).toContain("Annotated[CreatedVariant | DeletedVariant, Discriminator('kind')]");
+
+            // Should have correct imports
+            expect(output).toContain('from typing import Annotated, Literal');
+            expect(output).toContain('from pydantic import Discriminator');
+        });
+
+        it('exports $ref variant using ref name in union', () => {
+            const refVariant: RefField = {
+                name: '',
+                type: 'ref',
+                ref: '#/$defs/ExternalEvent',
+                description: '',
+                required: false,
+                nullable: false,
+                rawModifiers: {},
+                modifiers: [],
+                location: loc,
+            };
+
+            const matchField = makeMatchField('type', {
+                inline: makeObjectVariant([
+                    { name: 'data', type: 'string', required: true, description: 'Data' },
+                ]),
+                external: refVariant,
+            });
+
+            const output = exportPydantic(makeSchema(matchField));
+
+            // Should have the inline variant class
+            expect(output).toContain('class InlineVariant(BaseModel):');
+            expect(output).toContain("type: Literal['inline']");
+
+            // Should have Annotated union with ref name
+            expect(output).toContain("Annotated[InlineVariant | ExternalEvent, Discriminator('type')]");
         });
     });
 
