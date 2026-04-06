@@ -97,8 +97,8 @@ NEWLINE         = "\n" | "\r\n" ;
 
 ```yaml
 name: string.required: User's full name
-  ^ minLength: 2
-  ^ maxLength: 128
+  ^ min: 2
+  ^ max: 128
 ```
 
 ### Object with Nested Fields
@@ -118,8 +118,8 @@ user: object.required: User profile
 ```yaml
 tags: array: List of tags
   - string
-  ^ minItems: 1
-  ^ maxItems: 10
+  ^ min: 1
+  ^ max: 10
 ```
 
 ### Tuple Array
@@ -189,9 +189,9 @@ records: array: List of records
 
 ```yaml
 id: string|number: Flexible identifier
-  ^ string.minLength: 3
+  ^ string.min: 3          # type-prefixed (not yet implemented)
   ^ string.pattern: ^[A-Z0-9_-]+$
-  ^ number.min: 1000
+  ^ number.min: 1000       # type-prefixed (not yet implemented)
 ```
 
 ### Schema References

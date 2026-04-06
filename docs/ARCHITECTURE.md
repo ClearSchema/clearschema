@@ -144,8 +144,8 @@ Available for all field types:
 
 | Modifier | JSON Schema Mapping |
 |----------|---------------------|
-| `minLength` | `minLength` |
-| `maxLength` | `maxLength` |
+| `min` | `minLength` |
+| `max` | `maxLength` |
 | `pattern` | `pattern` |
 | `format` | `format` |
 
@@ -171,26 +171,28 @@ email: string: Email with specific domain
 |----------|---------------------|
 | `min` | `minimum` |
 | `max` | `maximum` |
-| `exclusiveMin` | `exclusiveMinimum` |
-| `exclusiveMax` | `exclusiveMaximum` |
+| `gt` | `exclusiveMinimum` |
+| `lt` | `exclusiveMaximum` |
 | `multipleOf` | `multipleOf` |
 
 ### Array Modifiers
 
 | Modifier | JSON Schema Mapping |
 |----------|---------------------|
-| `minItems` | `minItems` |
-| `maxItems` | `maxItems` |
+| `min` | `minItems` |
+| `max` | `maxItems` |
 | `uniqueItems` | `uniqueItems` |
 
-### Type-Specific Modifiers (for unions and arrays)
+### Type-Specific Modifiers (for unions — not yet implemented)
 
 Prefix modifier with type name:
 ```yaml
 id: string|number: Flexible ID
-  ^ string.minLength: 3
-  ^ number.min: 1000
+  ^ string.min: 3       # Valid: applies to string variant
+  ^ number.min: 1000    # Valid: applies to number variant
 ```
+
+> **Note:** Type-prefixed modifiers are not yet implemented. Bare `min`/`max`/`gt`/`lt` on union fields is currently a parse error.
 
 ---
 
@@ -202,38 +204,52 @@ Modifiers are type-specific. Applying an incompatible modifier is a **parse erro
 
 | Modifier | Valid Types | Error if applied to |
 |----------|-------------|---------------------|
-| `minLength`, `maxLength`, `pattern`, `format` | `string` | number, integer, boolean, null, object, array |
-| `min`, `max`, `exclusiveMin`, `exclusiveMax`, `multipleOf` | `number`, `integer` | string, boolean, null, object, array |
-| `minItems`, `maxItems`, `uniqueItems` | `array`, `array.tuple` | string, number, boolean, null, object |
-| `range` | `string`, `number`, `integer` | boolean, null, object, array |
+| `min`, `max` | `string`, `number`, `integer`, `array` | boolean, null, object, map, union |
+| `gt`, `lt` | `number`, `integer` | string, boolean, null, object, array, map, union |
+| `range` | `string`, `number`, `integer`, `array` | boolean, null, object, map, union |
+| `exclusiveRange` | `number`, `integer` | string, boolean, null, object, array, map, union |
+| `pattern`, `format` | `string` | number, integer, boolean, null, object, array |
+| `multipleOf` | `number`, `integer` | string, boolean, null, object, array |
+| `uniqueItems` | `array`, `array.tuple` | string, number, boolean, null, object |
 | `required`, `nullable`, `default`, `const`, `enum` | ALL types | (universal - always valid) |
 
 ### Validation Error Format
 
 ```
-ParseError: Invalid modifier 'minLength' for number field
+ParseError: "minLength" is not a valid modifier
   --> schema.clear:3:5
    |
  3 |   ^ minLength: 10
-   |     ^^^^^^^^^^ 'minLength' is only valid for string fields
+   |     ^^^^^^^^^^
    |
-  help: Did you mean 'min'?
+  help: Use "min" instead
 ```
+
+### Deprecated Modifier Names
+
+The following modifier names are no longer accepted and produce migration hints:
+
+| Old Name | New Name | Context |
+|----------|----------|---------|
+| `minLength` | `min` | string fields |
+| `maxLength` | `max` | string fields |
+| `minItems` | `min` | array fields |
+| `maxItems` | `max` | array fields |
+| `exclusiveMin` | `gt` | number/integer fields |
+| `exclusiveMax` | `lt` | number/integer fields |
 
 ### Union Type Modifiers
 
-For union types, modifiers must be prefixed with the target type:
+For union types, modifiers must be prefixed with the target type (not yet implemented):
 
 ```yaml
 id: string|number: Flexible ID
-  ^ string.minLength: 3    # Valid: applies to string variant
-  ^ number.min: 1000       # Valid: applies to number variant
-  ^ minLength: 3           # ERROR: ambiguous - which type?
+  ^ string.min: 3      # Valid: applies to string variant (future)
+  ^ number.min: 1000   # Valid: applies to number variant (future)
+  ^ min: 3             # ERROR: ambiguous on union types
 ```
 
-The validator MUST check that:
-1. The prefix type exists in the union
-2. The modifier is valid for that type
+> **Note:** Type-prefixed modifiers are deferred to a future release. Currently, bare constraint modifiers on union fields produce a parse error with a forward-looking hint.
 
 ### Modifier Conflict Validation
 
@@ -241,13 +257,14 @@ ClearSchema validates that modifier values are logically consistent. Conflicts a
 
 | Conflict | Error Message |
 |----------|---------------|
-| `minLength > maxLength` | "minLength ({n}) cannot exceed maxLength ({m})" |
-| `min > max` | "min ({n}) cannot exceed max ({m})" |
-| `exclusiveMin >= exclusiveMax` | "exclusiveMin ({n}) must be less than exclusiveMax ({m})" |
-| `minItems > maxItems` | "minItems ({n}) cannot exceed maxItems ({m})" |
+| `min > max` (on any type) | "min ({n}) cannot exceed max ({m})" (not yet implemented) |
+| `gt >= lt` | "gt ({n}) must be less than lt ({m})" (not yet implemented) |
 | `range: [a, b]` where `a > b` | "range minimum ({a}) cannot exceed maximum ({b})" |
-| `min` and `exclusiveMin` both set | "cannot specify both 'min' and 'exclusiveMin'" |
-| `max` and `exclusiveMax` both set | "cannot specify both 'max' and 'exclusiveMax'" |
+| `exclusiveRange: [a, b]` where `a > b` | "exclusiveRange minimum ({a}) cannot exceed maximum ({b})" |
+| `range` + `min` or `max` | "Cannot use both 'range' and 'min' on the same field" |
+| `exclusiveRange` + `gt` or `lt` | "Cannot use both 'exclusiveRange' and 'gt' on the same field" |
+
+> **Note:** Value-level conflict validation (e.g., `min > max`) is documented but not yet implemented. Range/explicit modifier conflicts ARE implemented.
 
 ---
 
@@ -257,9 +274,10 @@ The `range` modifier provides a shorthand for setting min/max constraints. Its m
 
 | Field Type | `range: [a, b]` Equivalent |
 |------------|---------------------------|
-| `string` | `minLength: a`, `maxLength: b` |
+| `string` | `min: a`, `max: b` (resolves to AST `minLength`/`maxLength`) |
 | `number` | `min: a`, `max: b` |
 | `integer` | `min: a`, `max: b` |
+| `array` | `min: a`, `max: b` (resolves to AST `minItems`/`maxItems`) |
 
 ### Syntax
 
@@ -286,13 +304,15 @@ probability: number: Probability value
   ^ exclusiveRange: [0, 1]    # 0 < value < 1
 ```
 
-### Range on Union Types
+### Range on Union Types (not yet implemented)
 
 ```yaml
 value: string|number: Flexible value
-  ^ string.range: [1, 100]    # string length 1-100
-  ^ number.range: [0, 1000]   # number value 0-1000
+  ^ string.range: [1, 100]    # string length 1-100 (future)
+  ^ number.range: [0, 1000]   # number value 0-1000 (future)
 ```
+
+> **Note:** Bare `range`/`exclusiveRange` on union fields is currently a parse error. Type-prefixed range modifiers are deferred to a future release.
 
 ### Range Expansion
 
@@ -406,17 +426,19 @@ Each exporter maintains a mapping table:
 
 ### Modifier Mapping Strategy
 
-| ClearSchema Modifier | JSON Schema | Pydantic Field |
-|---------------------|-------------|----------------|
-| `minLength: N` | `minLength: N` | `min_length=N` |
-| `maxLength: N` | `maxLength: N` | `max_length=N` |
-| `pattern: X` | `pattern: X` | `pattern=X` |
-| `min: N` | `minimum: N` | `ge=N` |
-| `max: N` | `maximum: N` | `le=N` |
-| `exclusiveMin: N` | `exclusiveMinimum: N` | `gt=N` |
-| `exclusiveMax: N` | `exclusiveMaximum: N` | `lt=N` |
-| `default: X` | `default: X` | `default=X` |
-| `enum: [...]` | `enum: [...]` | `Literal[...]` |
+| ClearSchema Modifier | Applies to | JSON Schema | Pydantic Field |
+|---------------------|------------|-------------|----------------|
+| `min: N` | string | `minLength: N` | `min_length=N` |
+| `max: N` | string | `maxLength: N` | `max_length=N` |
+| `min: N` | number/integer | `minimum: N` | `ge=N` |
+| `max: N` | number/integer | `maximum: N` | `le=N` |
+| `min: N` | array | `minItems: N` | (list length) |
+| `max: N` | array | `maxItems: N` | (list length) |
+| `gt: N` | number/integer | `exclusiveMinimum: N` | `gt=N` |
+| `lt: N` | number/integer | `exclusiveMaximum: N` | `lt=N` |
+| `pattern: X` | string | `pattern: X` | `pattern=X` |
+| `default: X` | all | `default: X` | `default=X` |
+| `enum: [...]` | all | `enum: [...]` | `Literal[...]` |
 
 ---
 
