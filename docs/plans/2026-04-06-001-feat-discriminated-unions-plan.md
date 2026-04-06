@@ -1,7 +1,7 @@
 ---
 title: "feat: Add discriminated unions via `match` keyword"
 type: feat
-status: active
+status: completed
 date: 2026-04-06
 origin: docs/brainstorms/2026-04-06-discriminated-unions-requirements.md
 ---
