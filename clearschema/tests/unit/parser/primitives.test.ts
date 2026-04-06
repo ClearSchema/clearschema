@@ -20,17 +20,17 @@ describe('Parser - Primitive Types', () => {
             expect(field.description).toBe('');
         });
 
-        it('parses string with minLength modifier', () => {
+        it('parses string with min modifier', () => {
             const input = `name: string: Name
-  ^ minLength: 2`;
+  ^ min: 2`;
             const field = parseField(input) as StringField;
 
             expect(field.minLength).toBe(2);
         });
 
-        it('parses string with maxLength modifier', () => {
+        it('parses string with max modifier', () => {
             const input = `name: string: Name
-  ^ maxLength: 50`;
+  ^ max: 50`;
             const field = parseField(input) as StringField;
 
             expect(field.maxLength).toBe(50);
@@ -54,8 +54,8 @@ describe('Parser - Primitive Types', () => {
 
         it('parses string with multiple modifiers', () => {
             const input = `name: string.required: Name
-  ^ minLength: 2
-  ^ maxLength: 50
+  ^ min: 2
+  ^ max: 50
   ^ default: "Unknown"`;
             const field = parseField(input) as StringField;
 
@@ -91,17 +91,17 @@ describe('Parser - Primitive Types', () => {
             expect(field.max).toBe(150);
         });
 
-        it('parses number with exclusiveMin modifier', () => {
+        it('parses number with gt modifier', () => {
             const input = `price: number: Price
-  ^ exclusiveMin: 0`;
+  ^ gt: 0`;
             const field = parseField(input) as NumberField;
 
             expect(field.exclusiveMin).toBe(0);
         });
 
-        it('parses number with exclusiveMax modifier', () => {
+        it('parses number with lt modifier', () => {
             const input = `price: number: Price
-  ^ exclusiveMax: 1000`;
+  ^ lt: 1000`;
             const field = parseField(input) as NumberField;
 
             expect(field.exclusiveMax).toBe(1000);
@@ -315,8 +315,8 @@ name: string: Name`;
 @targets json-schema, typescript
 
 name: string.required: User name
-  ^ minLength: 2
-  ^ maxLength: 50
+  ^ min: 2
+  ^ max: 50
 
 age: number: Age
   ^ min: 0
@@ -360,6 +360,111 @@ age: number: Age`;
             const schema = parse(input);
 
             expect(schema.fields).toHaveLength(2);
+        });
+    });
+
+    describe('migration hints for deprecated modifier names', () => {
+        it('rejects minLength on string with hint to use min', () => {
+            const input = `name: string: Name\n  ^ minLength: 2`;
+            expect(() => parseField(input)).toThrow(ParseError);
+            try { parseField(input); } catch (e) {
+                expect((e as ParseError).message).toContain('"minLength" is not a valid modifier');
+                expect((e as ParseError).hint).toContain('Use "min" instead');
+            }
+        });
+
+        it('rejects maxLength on string with hint to use max', () => {
+            const input = `name: string: Name\n  ^ maxLength: 50`;
+            expect(() => parseField(input)).toThrow(ParseError);
+            try { parseField(input); } catch (e) {
+                expect((e as ParseError).message).toContain('"maxLength" is not a valid modifier');
+                expect((e as ParseError).hint).toContain('Use "max" instead');
+            }
+        });
+
+        it('rejects minItems on array with hint to use min', () => {
+            const input = `tags: array: Tags\n  - string\n  ^ minItems: 1`;
+            expect(() => parseField(input)).toThrow(ParseError);
+            try { parseField(input); } catch (e) {
+                expect((e as ParseError).message).toContain('"minItems" is not a valid modifier');
+                expect((e as ParseError).hint).toContain('Use "min" instead');
+            }
+        });
+
+        it('rejects maxItems on array with hint to use max', () => {
+            const input = `tags: array: Tags\n  - string\n  ^ maxItems: 10`;
+            expect(() => parseField(input)).toThrow(ParseError);
+            try { parseField(input); } catch (e) {
+                expect((e as ParseError).message).toContain('"maxItems" is not a valid modifier');
+                expect((e as ParseError).hint).toContain('Use "max" instead');
+            }
+        });
+
+        it('rejects exclusiveMin on number with hint to use gt', () => {
+            const input = `price: number: Price\n  ^ exclusiveMin: 0`;
+            expect(() => parseField(input)).toThrow(ParseError);
+            try { parseField(input); } catch (e) {
+                expect((e as ParseError).message).toContain('"exclusiveMin" is not a valid modifier');
+                expect((e as ParseError).hint).toContain('Use "gt" instead');
+            }
+        });
+
+        it('rejects exclusiveMax on number with hint to use lt', () => {
+            const input = `price: number: Price\n  ^ exclusiveMax: 1000`;
+            expect(() => parseField(input)).toThrow(ParseError);
+            try { parseField(input); } catch (e) {
+                expect((e as ParseError).message).toContain('"exclusiveMax" is not a valid modifier');
+                expect((e as ParseError).hint).toContain('Use "lt" instead');
+            }
+        });
+    });
+
+    describe('type validation for constraint modifiers', () => {
+        it('rejects gt on string (number/integer only)', () => {
+            const input = `name: string: Name\n  ^ gt: 0`;
+            expect(() => parseField(input)).toThrow(ParseError);
+            try { parseField(input); } catch (e) {
+                expect((e as ParseError).message).toContain('"gt" is only valid on number/integer');
+            }
+        });
+
+        it('rejects lt on array (number/integer only)', () => {
+            const input = `tags: array: Tags\n  - string\n  ^ lt: 1`;
+            expect(() => parseField(input)).toThrow(ParseError);
+            try { parseField(input); } catch (e) {
+                expect((e as ParseError).message).toContain('"lt" is only valid on number/integer');
+            }
+        });
+
+        it('rejects min on boolean', () => {
+            const input = `active: boolean: Active\n  ^ min: 5`;
+            expect(() => parseField(input)).toThrow(ParseError);
+            try { parseField(input); } catch (e) {
+                expect((e as ParseError).message).toContain('"min" is not valid on boolean');
+            }
+        });
+
+        it('rejects max on null', () => {
+            const input = `empty: null: Null\n  ^ max: 5`;
+            expect(() => parseField(input)).toThrow(ParseError);
+            try { parseField(input); } catch (e) {
+                expect((e as ParseError).message).toContain('"max" is not valid on null');
+            }
+        });
+
+        it('rejects min on object', () => {
+            const input = `data: object: Data\n  ^ min: 5`;
+            expect(() => parseField(input)).toThrow(ParseError);
+            try { parseField(input); } catch (e) {
+                expect((e as ParseError).message).toContain('"min" is not valid on object');
+            }
+        });
+
+        it('allows min and max with min > max on string (conflict validation out of scope)', () => {
+            const input = `name: string: Name\n  ^ min: 5\n  ^ max: 3`;
+            const field = parseField(input) as StringField;
+            expect(field.minLength).toBe(5);
+            expect(field.maxLength).toBe(3);
         });
     });
 
@@ -430,7 +535,7 @@ age: number: Age`;
 
         it('tracks modifier location', () => {
             const input = `name: string: Name
-  ^ minLength: 2`;
+  ^ min: 2`;
             const field = parseField(input) as StringField;
 
             expect(field.modifiers).toHaveLength(1);
@@ -442,13 +547,13 @@ age: number: Age`;
     describe('rawModifiers', () => {
         it('stores all modifiers in rawModifiers', () => {
             const input = `name: string: Name
-  ^ minLength: 2
-  ^ maxLength: 50
+  ^ min: 2
+  ^ max: 50
   ^ customMod: value`;
             const field = parseField(input);
 
-            expect(field.rawModifiers['minLength']).toBe(2);
-            expect(field.rawModifiers['maxLength']).toBe(50);
+            expect(field.rawModifiers['min']).toBe(2);
+            expect(field.rawModifiers['max']).toBe(50);
             expect(field.rawModifiers['customMod']).toBe('value');
         });
     });

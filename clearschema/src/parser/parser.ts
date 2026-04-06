@@ -737,11 +737,19 @@ class Parser {
         baseProps: Omit<StringField, 'type' | 'minLength' | 'maxLength' | 'pattern' | 'format'>,
         rawModifiers: Record<string, any>
     ): StringField {
+        // Reject deprecated names with migration hints
+        this.rejectDeprecatedModifier(rawModifiers, 'minLength', 'min', baseProps);
+        this.rejectDeprecatedModifier(rawModifiers, 'maxLength', 'max', baseProps);
+
+        // Reject gt/lt on strings (number/integer only)
+        this.rejectNumberOnlyModifier(rawModifiers, 'gt', 'string', baseProps);
+        this.rejectNumberOnlyModifier(rawModifiers, 'lt', 'string', baseProps);
+
         return {
             ...baseProps,
             type: 'string',
-            minLength: rawModifiers['minLength'] as number | undefined,
-            maxLength: rawModifiers['maxLength'] as number | undefined,
+            minLength: rawModifiers['min'] as number | undefined,
+            maxLength: rawModifiers['max'] as number | undefined,
             pattern: rawModifiers['pattern'] as string | undefined,
             format: rawModifiers['format'] as string | undefined,
         };
@@ -752,13 +760,17 @@ class Parser {
         rawModifiers: Record<string, any>,
         type: 'number' | 'integer'
     ): NumberField {
+        // Reject deprecated names with migration hints
+        this.rejectDeprecatedModifier(rawModifiers, 'exclusiveMin', 'gt', baseProps);
+        this.rejectDeprecatedModifier(rawModifiers, 'exclusiveMax', 'lt', baseProps);
+
         return {
             ...baseProps,
             type,
             min: rawModifiers['min'] as number | undefined,
             max: rawModifiers['max'] as number | undefined,
-            exclusiveMin: rawModifiers['exclusiveMin'] as number | undefined,
-            exclusiveMax: rawModifiers['exclusiveMax'] as number | undefined,
+            exclusiveMin: rawModifiers['gt'] as number | undefined,
+            exclusiveMax: rawModifiers['lt'] as number | undefined,
             multipleOf: rawModifiers['multipleOf'] as number | undefined,
         };
     }
@@ -766,6 +778,7 @@ class Parser {
     private buildBooleanField(
         baseProps: Omit<BooleanField, 'type'>
     ): BooleanField {
+        this.rejectInvalidTypeModifiers(baseProps, 'boolean');
         return {
             ...baseProps,
             type: 'boolean',
@@ -775,6 +788,7 @@ class Parser {
     private buildNullField(
         baseProps: Omit<NullField, 'type'>
     ): NullField {
+        this.rejectInvalidTypeModifiers(baseProps, 'null');
         return {
             ...baseProps,
             type: 'null',
@@ -786,6 +800,7 @@ class Parser {
         rawModifiers: Record<string, any>,
         childFields: Field[]
     ): ObjectField {
+        this.rejectInvalidTypeModifiers(baseProps, 'object');
         return {
             ...baseProps,
             type: 'object',
@@ -798,6 +813,14 @@ class Parser {
         rawModifiers: Record<string, any>,
         arrayItems: ArrayItemInfo[]
     ): ArrayField {
+        // Reject deprecated names with migration hints
+        this.rejectDeprecatedModifier(rawModifiers, 'minItems', 'min', baseProps);
+        this.rejectDeprecatedModifier(rawModifiers, 'maxItems', 'max', baseProps);
+
+        // Reject gt/lt on arrays (number/integer only)
+        this.rejectNumberOnlyModifier(rawModifiers, 'gt', 'array', baseProps);
+        this.rejectNumberOnlyModifier(rawModifiers, 'lt', 'array', baseProps);
+
         // Determine item type from array items
         let itemType: Field | FieldTypeName = 'string'; // Default
 
@@ -809,8 +832,8 @@ class Parser {
             ...baseProps,
             type: 'array',
             itemType,
-            minItems: rawModifiers['minItems'] as number | undefined,
-            maxItems: rawModifiers['maxItems'] as number | undefined,
+            minItems: rawModifiers['min'] as number | undefined,
+            maxItems: rawModifiers['max'] as number | undefined,
             uniqueItems: rawModifiers['uniqueItems'] as boolean | undefined,
         };
     }
@@ -819,6 +842,7 @@ class Parser {
         baseProps: Omit<MapField, 'type' | 'valueType'>,
         arrayItems: ArrayItemInfo[]
     ): MapField {
+        this.rejectInvalidTypeModifiers(baseProps, 'map');
         if (arrayItems.length === 0) {
             throw new ParseError(
                 'map type requires exactly one child item defining the value type',
@@ -880,6 +904,19 @@ class Parser {
         baseProps: Omit<UnionField, 'type' | 'types'>,
         fieldLine: ParsedFieldLine
     ): UnionField {
+        // Reject constraint modifiers on union fields — ambiguous without type prefix
+        const unionConstraints = ['min', 'max', 'gt', 'lt', 'range', 'exclusiveRange'];
+        for (const mod of unionConstraints) {
+            if (baseProps.rawModifiers[mod] !== undefined) {
+                throw new ParseError(
+                    `"${mod}" is ambiguous on union types`,
+                    baseProps.location,
+                    this.source,
+                    `Type-prefixed modifiers (e.g., "string.${mod}") will be supported in a future release`
+                );
+            }
+        }
+
         // Extract union types from the original type string
         // typeString available via fieldLine.typeInfo.type if needed
 
@@ -950,6 +987,54 @@ class Parser {
             type,
             schemas,
         };
+    }
+
+    private rejectDeprecatedModifier(
+        rawModifiers: Record<string, any>,
+        oldName: string,
+        newName: string,
+        baseProps: { location: SourceLocation }
+    ): void {
+        if (rawModifiers[oldName] !== undefined) {
+            throw new ParseError(
+                `"${oldName}" is not a valid modifier`,
+                baseProps.location,
+                this.source,
+                `Use "${newName}" instead`
+            );
+        }
+    }
+
+    private rejectNumberOnlyModifier(
+        rawModifiers: Record<string, any>,
+        modName: string,
+        typeName: string,
+        baseProps: { location: SourceLocation }
+    ): void {
+        if (rawModifiers[modName] !== undefined) {
+            throw new ParseError(
+                `"${modName}" is only valid on number/integer types`,
+                baseProps.location,
+                this.source,
+                `"${modName}" cannot be used on ${typeName} fields`
+            );
+        }
+    }
+
+    private rejectInvalidTypeModifiers(
+        baseProps: { rawModifiers: Record<string, any>; location: SourceLocation },
+        typeName: string
+    ): void {
+        const constraintModifiers = ['min', 'max', 'gt', 'lt', 'range', 'exclusiveRange'];
+        for (const mod of constraintModifiers) {
+            if (baseProps.rawModifiers[mod] !== undefined) {
+                throw new ParseError(
+                    `"${mod}" is not valid on ${typeName} fields`,
+                    baseProps.location,
+                    this.source,
+                );
+            }
+        }
     }
 
     private synchronize(): void {

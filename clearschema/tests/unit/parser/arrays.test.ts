@@ -70,7 +70,7 @@ describe('Parser - Array Fields', () => {
         it('parses array with minItems', () => {
             const input = `tags: array: Tags
   - string
-  ^ minItems: 1`;
+  ^ min: 1`;
 
             const field = parseField(input) as ArrayField;
 
@@ -80,7 +80,7 @@ describe('Parser - Array Fields', () => {
         it('parses array with maxItems', () => {
             const input = `tags: array: Tags
   - string
-  ^ maxItems: 10`;
+  ^ max: 10`;
 
             const field = parseField(input) as ArrayField;
 
@@ -100,8 +100,8 @@ describe('Parser - Array Fields', () => {
         it('parses array with all modifiers', () => {
             const input = `tags: array: Tags
   - string
-  ^ minItems: 1
-  ^ maxItems: 10
+  ^ min: 1
+  ^ max: 10
   ^ uniqueItems: true`;
 
             const field = parseField(input) as ArrayField;
@@ -113,7 +113,7 @@ describe('Parser - Array Fields', () => {
 
         it('parses array with modifiers before item type', () => {
             const input = `tags: array: Tags
-  ^ minItems: 1
+  ^ min: 1
   - string`;
 
             const field = parseField(input) as ArrayField;
@@ -147,7 +147,7 @@ describe('Parser - Array Fields', () => {
   - object:
     name: string.required: Name
     email: string.required: Email
-  ^ minItems: 1`;
+  ^ min: 1`;
 
             const field = parseField(input) as ArrayField;
 
