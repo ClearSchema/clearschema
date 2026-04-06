@@ -64,8 +64,8 @@ describe('Pydantic Exporter', () => {
     describe('field constraints', () => {
         it('exports string constraints', () => {
             const schema = parse(`name: string.required: Name
-  ^ minLength: 2
-  ^ maxLength: 100`);
+  ^ min: 2
+  ^ max: 100`);
             const output = exportPydantic(schema);
 
             expect(output).toContain('min_length=2');

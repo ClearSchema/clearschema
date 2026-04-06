@@ -90,7 +90,7 @@ root: $ref: #/$defs/A`);
     describe('unsupported keyword stripping', () => {
         it('strips minLength, pattern, default and populates warnings', () => {
             const schema = parse(`name: string: Name
-  ^ minLength: 3
+  ^ min: 3
   ^ pattern: "^[a-z]+$"
   ^ default: "foo"`);
             const result = exportLlmSchema(schema);
@@ -146,7 +146,7 @@ root: $ref: #/$defs/A`);
   Address: object: Address
     street: string.required: Street
     city: string.required: City
-      ^ minLength: 1
+      ^ min: 1
 
   User: object: User
     name: string.required: Name

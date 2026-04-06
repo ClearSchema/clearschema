@@ -50,10 +50,10 @@ describe('Zod Exporter', () => {
     });
 
     describe('string modifiers', () => {
-        it('exports minLength/maxLength', () => {
+        it('exports min/max on string', () => {
             const schema = parse(`name: string: Name
-  ^ minLength: 1
-  ^ maxLength: 100`);
+  ^ min: 1
+  ^ max: 100`);
             const output = exportZod(schema);
 
             expect(output).toContain('z.string().min(1).max(100)');
@@ -151,10 +151,10 @@ describe('Zod Exporter', () => {
             expect(output).toContain('z.number().multipleOf(0.5)');
         });
 
-        it('exports exclusiveMin/exclusiveMax as gt/lt', () => {
+        it('exports gt/lt on integer', () => {
             const schema = parse(`score: integer: Score
-  ^ exclusiveMin: 0
-  ^ exclusiveMax: 100`);
+  ^ gt: 0
+  ^ lt: 100`);
             const output = exportZod(schema);
 
             expect(output).toContain('z.number().int().gt(0).lt(100)');
@@ -207,8 +207,8 @@ describe('Zod Exporter', () => {
 
         it('chains modifiers in correct order: type → constraints → nullable → optional → default → describe', () => {
             const schema = parse(`name: string.nullable: User name
-  ^ minLength: 1
-  ^ maxLength: 50
+  ^ min: 1
+  ^ max: 50
   ^ default: anonymous`);
             const output = exportZod(schema);
 
@@ -397,11 +397,11 @@ describe('Zod Exporter', () => {
             expect(output).toContain('z.array(z.object(');
         });
 
-        it('exports array with minItems/maxItems', () => {
+        it('exports array with min/max', () => {
             const schema = parse(`items: array: Items
   - string
-  ^ minItems: 1
-  ^ maxItems: 10`);
+  ^ min: 1
+  ^ max: 10`);
             const output = exportZod(schema);
 
             expect(output).toContain('z.array(z.string()).min(1).max(10)');
@@ -677,8 +677,8 @@ admin: allOf: Admin
 
 user: object.required: User data
   name: string.required: Full name
-    ^ minLength: 1
-    ^ maxLength: 100
+    ^ min: 1
+    ^ max: 100
   email: string.required: Email
     ^ format: email
   age: integer: Age

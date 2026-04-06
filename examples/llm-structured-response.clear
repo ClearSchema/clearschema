@@ -10,7 +10,7 @@ analysis: object.required: Sentiment analysis result
     ^ max: 1
 
   reasoning: string.required: Explanation of the sentiment assessment
-    ^ minLength: 10
+    ^ min: 10
 
   keywords: array: Key phrases that influenced the analysis
     - string
