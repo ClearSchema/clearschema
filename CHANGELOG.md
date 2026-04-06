@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-04-06
+
+### Changed
+
+- **Unified constraint modifier names to Zod-style conventions** (BREAKING)
+  - `min`/`max` now universal for strings (length), numbers (value), and arrays (item count) — replaces `minLength`/`maxLength`/`minItems`/`maxItems`
+  - `gt`/`lt` replace `exclusiveMin`/`exclusiveMax` (numbers/integers only)
+  - Old names produce actionable migration hints (e.g., `"minLength" is not a valid modifier — use "min" instead`)
+  - Internal AST property names unchanged — only user-facing syntax changed
+
+### Added
+
+- **`range` and `exclusiveRange` shorthand modifiers**
+  - `^ range: [3, 20]` expands to `min: 3, max: 20` (works on string, number, integer, array)
+  - `^ exclusiveRange: [0, 1]` expands to `gt: 0, lt: 1` (number/integer only)
+  - Conflict detection: `range` + explicit `min`/`max` on same field is a parse error
+  - Range values validated as finite numbers
+- **Type validation for constraint modifiers**
+  - `min`/`max` rejected on boolean, null, object, map, and union fields with clear errors
+  - `gt`/`lt` rejected on non-number/integer types
+  - Union fields get forward-looking hint about future type-prefixed syntax
+- **ClearSchema serializer outputs new names** for round-trip fidelity
+
+### Test Coverage
+
+- 502 tests passing across 23 test suites
+
 ## [0.6.0] - 2026-04-05
 
 ### Added
