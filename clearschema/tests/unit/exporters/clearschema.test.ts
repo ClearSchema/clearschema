@@ -262,8 +262,8 @@ describe('ClearSchema Serializer', () => {
             const output = exportClearSchema(schema);
 
             expect(output).toContain('name: string.required: Full name');
-            expect(output).toContain('  ^ minLength: 2');
-            expect(output).toContain('  ^ maxLength: 100');
+            expect(output).toContain('  ^ min: 2');
+            expect(output).toContain('  ^ max: 100');
             expect(output).toContain('  ^ format: email');
             expect(output).toContain('  ^ pattern: ^[A-Z]+$');
         });
@@ -301,8 +301,8 @@ describe('ClearSchema Serializer', () => {
             const output = exportClearSchema(schema);
 
             expect(output).toContain('score: integer: Score');
-            expect(output).toContain('  ^ exclusiveMin: 0');
-            expect(output).toContain('  ^ exclusiveMax: 100');
+            expect(output).toContain('  ^ gt: 0');
+            expect(output).toContain('  ^ lt: 100');
         });
     });
 
@@ -376,8 +376,8 @@ describe('ClearSchema Serializer', () => {
             ]);
             const output = exportClearSchema(schema);
 
-            expect(output).toContain('  ^ minItems: 1');
-            expect(output).toContain('  ^ maxItems: 10');
+            expect(output).toContain('  ^ min: 1');
+            expect(output).toContain('  ^ max: 10');
         });
 
         it('serializes array with uniqueItems', () => {
