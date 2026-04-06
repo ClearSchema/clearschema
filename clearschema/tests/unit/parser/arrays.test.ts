@@ -123,6 +123,20 @@ describe('Parser - Array Fields', () => {
         });
     });
 
+    describe('array range shorthand', () => {
+        it('expands range on array to minItems and maxItems', () => {
+            const input = `tags: array: Tags\n  - string\n  ^ range: [1, 10]`;
+            const field = parseField(input) as ArrayField;
+            expect(field.minItems).toBe(1);
+            expect(field.maxItems).toBe(10);
+        });
+
+        it('rejects exclusiveRange on array (number/integer only)', () => {
+            const input = `tags: array: Tags\n  - string\n  ^ exclusiveRange: [0, 10]`;
+            expect(() => parseField(input)).toThrow();
+        });
+    });
+
     describe('array with inline object items', () => {
         it('parses array with inline object', () => {
             const input = `users: array: Users

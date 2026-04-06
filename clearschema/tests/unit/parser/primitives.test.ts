@@ -468,6 +468,117 @@ age: number: Age`;
         });
     });
 
+    describe('range shorthand', () => {
+        it('expands range on string to minLength and maxLength', () => {
+            const input = `name: string: Name\n  ^ range: [3, 20]`;
+            const field = parseField(input) as StringField;
+            expect(field.minLength).toBe(3);
+            expect(field.maxLength).toBe(20);
+        });
+
+        it('expands range on number to min and max', () => {
+            const input = `temp: number: Temperature\n  ^ range: [-40, 60]`;
+            const field = parseField(input) as NumberField;
+            expect(field.min).toBe(-40);
+            expect(field.max).toBe(60);
+        });
+
+        it('expands range on integer to min and max', () => {
+            const input = `count: integer: Count\n  ^ range: [0, 150]`;
+            const field = parseField(input) as NumberField;
+            expect(field.min).toBe(0);
+            expect(field.max).toBe(150);
+        });
+
+        it('expands exclusiveRange on number to exclusiveMin and exclusiveMax', () => {
+            const input = `rate: number: Rate\n  ^ exclusiveRange: [0, 1]`;
+            const field = parseField(input) as NumberField;
+            expect(field.exclusiveMin).toBe(0);
+            expect(field.exclusiveMax).toBe(1);
+        });
+
+        it('allows range with min equals max', () => {
+            const input = `exact: string: Exact\n  ^ range: [5, 5]`;
+            const field = parseField(input) as StringField;
+            expect(field.minLength).toBe(5);
+            expect(field.maxLength).toBe(5);
+        });
+
+        it('rejects range with min > max', () => {
+            const input = `name: string: Name\n  ^ range: [10, 5]`;
+            expect(() => parseField(input)).toThrow(ParseError);
+            try { parseField(input); } catch (e) {
+                expect((e as ParseError).message).toContain('range minimum (10) cannot exceed maximum (5)');
+            }
+        });
+
+        it('rejects range on boolean', () => {
+            const input = `active: boolean: Active\n  ^ range: [0, 1]`;
+            expect(() => parseField(input)).toThrow(ParseError);
+        });
+
+        it('rejects exclusiveRange on string (number/integer only)', () => {
+            const input = `name: string: Name\n  ^ exclusiveRange: [0, 1]`;
+            expect(() => parseField(input)).toThrow(ParseError);
+            try { parseField(input); } catch (e) {
+                expect((e as ParseError).message).toContain('"exclusiveRange" is only valid on number/integer');
+            }
+        });
+
+        it('rejects range with only 1 element', () => {
+            const input = `name: string: Name\n  ^ range: [0]`;
+            expect(() => parseField(input)).toThrow(ParseError);
+            try { parseField(input); } catch (e) {
+                expect((e as ParseError).message).toContain('range requires exactly 2 values');
+            }
+        });
+
+        it('rejects range + min conflict on same field', () => {
+            const input = `name: string: Name\n  ^ range: [1, 10]\n  ^ min: 5`;
+            expect(() => parseField(input)).toThrow(ParseError);
+            try { parseField(input); } catch (e) {
+                expect((e as ParseError).message).toContain("Cannot use both 'range' and 'min'");
+            }
+        });
+
+        it('rejects range + max conflict on same field', () => {
+            const input = `count: number: Count\n  ^ range: [1, 10]\n  ^ max: 5`;
+            expect(() => parseField(input)).toThrow(ParseError);
+            try { parseField(input); } catch (e) {
+                expect((e as ParseError).message).toContain("Cannot use both 'range' and 'max'");
+            }
+        });
+
+        it('rejects exclusiveRange + gt conflict', () => {
+            const input = `rate: number: Rate\n  ^ exclusiveRange: [0, 1]\n  ^ gt: 0`;
+            expect(() => parseField(input)).toThrow(ParseError);
+            try { parseField(input); } catch (e) {
+                expect((e as ParseError).message).toContain("Cannot use both 'exclusiveRange' and 'gt'");
+            }
+        });
+
+        it('range does not appear in resulting AST properties', () => {
+            const input = `name: string: Name\n  ^ range: [3, 20]`;
+            const field = parseField(input) as StringField;
+            // range expands to minLength/maxLength - no 'range' property on StringField
+            expect(field.minLength).toBe(3);
+            expect(field.maxLength).toBe(20);
+            expect((field as any).range).toBeUndefined();
+        });
+    });
+
+    describe('range on union types', () => {
+        it('rejects range on union', () => {
+            const input = `id: string|number: ID\n  ^ range: [1, 10]`;
+            expect(() => parseField(input)).toThrow(ParseError);
+        });
+
+        it('rejects exclusiveRange on union', () => {
+            const input = `id: string|number: ID\n  ^ exclusiveRange: [0, 1]`;
+            expect(() => parseField(input)).toThrow(ParseError);
+        });
+    });
+
     describe('error handling', () => {
         it('reports error for missing colon', () => {
             expect(() => {

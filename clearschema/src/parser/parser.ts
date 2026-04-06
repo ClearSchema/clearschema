@@ -741,15 +741,19 @@ class Parser {
         this.rejectDeprecatedModifier(rawModifiers, 'minLength', 'min', baseProps);
         this.rejectDeprecatedModifier(rawModifiers, 'maxLength', 'max', baseProps);
 
-        // Reject gt/lt on strings (number/integer only)
+        // Reject gt/lt/exclusiveRange on strings (number/integer only)
         this.rejectNumberOnlyModifier(rawModifiers, 'gt', 'string', baseProps);
         this.rejectNumberOnlyModifier(rawModifiers, 'lt', 'string', baseProps);
+        this.rejectNumberOnlyModifier(rawModifiers, 'exclusiveRange', 'string', baseProps);
+
+        // Expand range shorthand
+        const range = this.expandRange(rawModifiers, 'min', 'max', baseProps);
 
         return {
             ...baseProps,
             type: 'string',
-            minLength: rawModifiers['min'] as number | undefined,
-            maxLength: rawModifiers['max'] as number | undefined,
+            minLength: range?.min ?? rawModifiers['min'] as number | undefined,
+            maxLength: range?.max ?? rawModifiers['max'] as number | undefined,
             pattern: rawModifiers['pattern'] as string | undefined,
             format: rawModifiers['format'] as string | undefined,
         };
@@ -764,13 +768,17 @@ class Parser {
         this.rejectDeprecatedModifier(rawModifiers, 'exclusiveMin', 'gt', baseProps);
         this.rejectDeprecatedModifier(rawModifiers, 'exclusiveMax', 'lt', baseProps);
 
+        // Expand range and exclusiveRange shorthands
+        const range = this.expandRange(rawModifiers, 'min', 'max', baseProps);
+        const exRange = this.expandExclusiveRange(rawModifiers, 'gt', 'lt', baseProps);
+
         return {
             ...baseProps,
             type,
-            min: rawModifiers['min'] as number | undefined,
-            max: rawModifiers['max'] as number | undefined,
-            exclusiveMin: rawModifiers['gt'] as number | undefined,
-            exclusiveMax: rawModifiers['lt'] as number | undefined,
+            min: range?.min ?? rawModifiers['min'] as number | undefined,
+            max: range?.max ?? rawModifiers['max'] as number | undefined,
+            exclusiveMin: exRange?.min ?? rawModifiers['gt'] as number | undefined,
+            exclusiveMax: exRange?.max ?? rawModifiers['lt'] as number | undefined,
             multipleOf: rawModifiers['multipleOf'] as number | undefined,
         };
     }
@@ -817,9 +825,13 @@ class Parser {
         this.rejectDeprecatedModifier(rawModifiers, 'minItems', 'min', baseProps);
         this.rejectDeprecatedModifier(rawModifiers, 'maxItems', 'max', baseProps);
 
-        // Reject gt/lt on arrays (number/integer only)
+        // Reject gt/lt/exclusiveRange on arrays (number/integer only)
         this.rejectNumberOnlyModifier(rawModifiers, 'gt', 'array', baseProps);
         this.rejectNumberOnlyModifier(rawModifiers, 'lt', 'array', baseProps);
+        this.rejectNumberOnlyModifier(rawModifiers, 'exclusiveRange', 'array', baseProps);
+
+        // Expand range shorthand
+        const range = this.expandRange(rawModifiers, 'min', 'max', baseProps);
 
         // Determine item type from array items
         let itemType: Field | FieldTypeName = 'string'; // Default
@@ -832,8 +844,8 @@ class Parser {
             ...baseProps,
             type: 'array',
             itemType,
-            minItems: rawModifiers['min'] as number | undefined,
-            maxItems: rawModifiers['max'] as number | undefined,
+            minItems: range?.min ?? rawModifiers['min'] as number | undefined,
+            maxItems: range?.max ?? rawModifiers['max'] as number | undefined,
             uniqueItems: rawModifiers['uniqueItems'] as boolean | undefined,
         };
     }
@@ -987,6 +999,104 @@ class Parser {
             type,
             schemas,
         };
+    }
+
+    private expandRange(
+        rawModifiers: Record<string, any>,
+        minProp: string,
+        maxProp: string,
+        baseProps: { location: SourceLocation }
+    ): { min: number; max: number } | undefined {
+        const range = rawModifiers['range'];
+        if (range === undefined) return undefined;
+
+        // Validate it's a 2-element array
+        if (!Array.isArray(range) || range.length !== 2) {
+            throw new ParseError(
+                'range requires exactly 2 values [min, max]',
+                baseProps.location,
+                this.source,
+                'Expected format: ^ range: [min, max]'
+            );
+        }
+
+        const [min, max] = range as [number, number];
+
+        // Validate min <= max
+        if (min > max) {
+            throw new ParseError(
+                `range minimum (${min}) cannot exceed maximum (${max})`,
+                baseProps.location,
+                this.source,
+            );
+        }
+
+        // Check for conflicts with explicit min/max
+        if (rawModifiers[minProp] !== undefined) {
+            throw new ParseError(
+                `Cannot use both 'range' and '${minProp}' on the same field`,
+                baseProps.location,
+                this.source,
+            );
+        }
+        if (rawModifiers[maxProp] !== undefined) {
+            throw new ParseError(
+                `Cannot use both 'range' and '${maxProp}' on the same field`,
+                baseProps.location,
+                this.source,
+            );
+        }
+
+        return { min, max };
+    }
+
+    private expandExclusiveRange(
+        rawModifiers: Record<string, any>,
+        minProp: string,
+        maxProp: string,
+        baseProps: { location: SourceLocation }
+    ): { min: number; max: number } | undefined {
+        const range = rawModifiers['exclusiveRange'];
+        if (range === undefined) return undefined;
+
+        // Validate it's a 2-element array
+        if (!Array.isArray(range) || range.length !== 2) {
+            throw new ParseError(
+                'exclusiveRange requires exactly 2 values [min, max]',
+                baseProps.location,
+                this.source,
+                'Expected format: ^ exclusiveRange: [min, max]'
+            );
+        }
+
+        const [min, max] = range as [number, number];
+
+        // Validate min <= max
+        if (min > max) {
+            throw new ParseError(
+                `exclusiveRange minimum (${min}) cannot exceed maximum (${max})`,
+                baseProps.location,
+                this.source,
+            );
+        }
+
+        // Check for conflicts with explicit gt/lt
+        if (rawModifiers[minProp] !== undefined) {
+            throw new ParseError(
+                `Cannot use both 'exclusiveRange' and '${minProp}' on the same field`,
+                baseProps.location,
+                this.source,
+            );
+        }
+        if (rawModifiers[maxProp] !== undefined) {
+            throw new ParseError(
+                `Cannot use both 'exclusiveRange' and '${maxProp}' on the same field`,
+                baseProps.location,
+                this.source,
+            );
+        }
+
+        return { min, max };
     }
 
     private rejectDeprecatedModifier(
