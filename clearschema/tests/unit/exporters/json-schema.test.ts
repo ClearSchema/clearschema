@@ -519,7 +519,7 @@ user: $ref: #/$defs/User`);
             });
         });
 
-        it('exports $ref variant as bare $ref pointer in oneOf', () => {
+        it('exports $ref variant wrapped in allOf with discriminator const', () => {
             const refVariant: RefField = {
                 name: '',
                 type: 'ref',
@@ -544,7 +544,15 @@ user: $ref: #/$defs/User`);
 
             expect(result?.oneOf).toHaveLength(2);
             expect(result?.oneOf?.[0]?.properties?.type).toEqual({ const: 'inline' });
-            expect(result?.oneOf?.[1]).toEqual({ $ref: '#/$defs/ExternalEvent' });
+            expect(result?.oneOf?.[1]).toEqual({
+                allOf: [
+                    { $ref: '#/$defs/ExternalEvent' },
+                    {
+                        properties: { type: { const: 'external' } },
+                        required: ['type'],
+                    },
+                ],
+            });
         });
 
         it('includes discriminator in required array alongside existing required fields', () => {

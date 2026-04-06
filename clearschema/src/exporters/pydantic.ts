@@ -256,7 +256,10 @@ export class PydanticExporter implements Exporter<string> {
                 variantClassNames.push(refName);
             } else {
                 // Inline ObjectField variant: emit a Pydantic model class
-                const className = variantKey.charAt(0).toUpperCase() + variantKey.slice(1) + 'Variant';
+                const className = variantKey
+                    .split(/[-_]/)
+                    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+                    .join('') + 'Variant';
                 variantClassNames.push(className);
 
                 const classLines: string[] = [];

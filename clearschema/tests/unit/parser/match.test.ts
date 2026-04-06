@@ -161,6 +161,19 @@ describe('Match (Discriminated Union) Parser', () => {
         }
     });
 
+    it('rejects empty variant key', () => {
+        const input = `payment: match(type)
+  :
+    number: string`;
+
+        expect(() => parseField(input)).toThrow(ParseError);
+        try {
+            parseField(input);
+        } catch (e) {
+            expect((e as ParseError).message).toContain('Variant key cannot be empty');
+        }
+    });
+
     it('handles variant with nested object fields', () => {
         const input = `event: match(type)
   order:

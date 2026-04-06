@@ -1119,6 +1119,16 @@ class Parser {
                 const variantKey = variantLine.substring(0, colonIndex).trim();
                 const rest = variantLine.substring(colonIndex + 1).trim();
 
+                // Validate variant key is not empty
+                if (variantKey === '') {
+                    throw new ParseError(
+                        'Variant key cannot be empty',
+                        variantToken.location,
+                        this.source,
+                        'Provide a non-empty variant key before the colon'
+                    );
+                }
+
                 // Validate unique variant keys
                 if (seenKeys.has(variantKey)) {
                     throw new ParseError(

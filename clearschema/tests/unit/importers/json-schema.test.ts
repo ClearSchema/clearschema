@@ -950,6 +950,75 @@ describe('JSON Schema Importer', () => {
             const thing = fieldByName(schema.fields, 'thing') as CompositionField;
             expect(thing.type).toBe('oneOf');
         });
+
+        it('oneOf with mixed $ref and inline WITH shared const → MatchField (Fix #2)', () => {
+            const { schema } = importJsonSchema({
+                type: 'object',
+                properties: {
+                    payment: {
+                        oneOf: [
+                            { $ref: '#/$defs/BankTransfer' },
+                            {
+                                type: 'object',
+                                properties: {
+                                    method: { const: 'credit-card' },
+                                    cardNumber: { type: 'string' },
+                                },
+                                required: ['method'],
+                            },
+                            {
+                                type: 'object',
+                                properties: {
+                                    method: { const: 'paypal' },
+                                    email: { type: 'string' },
+                                },
+                                required: ['method'],
+                            },
+                        ],
+                    },
+                },
+            });
+
+            const payment = fieldByName(schema.fields, 'payment') as MatchField;
+            expect(payment.type).toBe('match');
+            expect(payment.discriminator).toBe('method');
+            // $ref variant keyed by basename, inline variants keyed by const value
+            expect(Object.keys(payment.variants)).toContain('BankTransfer');
+            expect(Object.keys(payment.variants)).toContain('credit-card');
+            expect(Object.keys(payment.variants)).toContain('paypal');
+        });
+
+        it('importDiscriminatedUnion falls back to composition when variant lacks discriminator (Fix #1)', () => {
+            const { schema } = importJsonSchema({
+                type: 'object',
+                properties: {
+                    event: {
+                        oneOf: [
+                            {
+                                type: 'object',
+                                properties: {
+                                    type: { const: 'click' },
+                                    x: { type: 'number' },
+                                },
+                            },
+                            {
+                                type: 'object',
+                                properties: {
+                                    // No 'type' discriminator property at all
+                                    data: { type: 'string' },
+                                },
+                            },
+                        ],
+                        discriminator: { propertyName: 'type' },
+                    },
+                },
+            });
+
+            // Should fall back to composition instead of returning partial MatchField
+            const event = fieldByName(schema.fields, 'event') as CompositionField;
+            expect(event.type).toBe('oneOf');
+            expect(event.schemas).toHaveLength(2);
+        });
     });
 
     // -----------------------------------------------------------------------

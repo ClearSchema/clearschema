@@ -350,7 +350,18 @@ export class JsonSchemaExporter implements Exporter<JsonSchema> {
         const schemas: JsonSchemaField[] = [];
         for (const [variantKey, variant] of Object.entries(field.variants)) {
             if (variant.type === 'ref') {
-                schemas.push(this.exportRef(variant, options));
+                // Wrap $ref with allOf to inject discriminator const
+                schemas.push({
+                    allOf: [
+                        this.exportRef(variant, options),
+                        {
+                            properties: {
+                                [field.discriminator]: { const: variantKey },
+                            },
+                            required: [field.discriminator],
+                        },
+                    ],
+                });
             } else {
                 // Inline ObjectField variant: export as object and inject discriminator
                 const exported = this.exportObject(variant, options);

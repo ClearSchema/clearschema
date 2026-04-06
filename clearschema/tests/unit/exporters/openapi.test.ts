@@ -155,6 +155,47 @@ users: array.required: Users
             });
         });
 
+        it('injects discriminator for nested match field inside object', () => {
+            const innerMatch = makeMatchField('type', {
+                created: makeObjectVariant([
+                    { name: 'createdAt', type: 'string', required: false, description: 'Timestamp' },
+                ]),
+                deleted: makeObjectVariant([
+                    { name: 'deletedAt', type: 'string', required: false, description: 'Timestamp' },
+                ]),
+            });
+            innerMatch.name = 'event';
+
+            // Wrap the match field inside an object field
+            const outerField: ObjectField = {
+                name: 'wrapper',
+                type: 'object',
+                fields: [innerMatch],
+                description: 'Wrapper object',
+                required: true,
+                nullable: false,
+                rawModifiers: {},
+                modifiers: [],
+                location: loc,
+            };
+
+            const schema: Schema = {
+                fields: [outerField],
+                definitions: [],
+                imports: [],
+                location: loc,
+            } as any;
+
+            const output = exportOpenAPI(schema);
+            const rootSchema = output.components.schemas.RootSchema;
+
+            expect(rootSchema).toBeDefined();
+            expect(rootSchema.properties.wrapper.properties.event.oneOf).toHaveLength(2);
+            expect(rootSchema.properties.wrapper.properties.event.discriminator).toEqual({
+                propertyName: 'type',
+            });
+        });
+
         it('injects discriminator for match field with $ref variant', () => {
             const refVariant: RefField = {
                 name: '',

@@ -545,30 +545,30 @@ export class JsonSchemaImporter {
     private findSharedConstProperty(variants: any[]): string | null {
         if (variants.length === 0) return null;
 
-        // Only consider variants that are inline objects with properties
-        for (const variant of variants) {
-            if (
-                variant == null ||
-                typeof variant !== 'object' ||
-                variant.$ref !== undefined ||
-                variant.properties == null ||
-                typeof variant.properties !== 'object'
-            ) {
-                return null;
-            }
-        }
+        // Filter to inline variants (skip $ref variants)
+        const inlineVariants = variants.filter(
+            (v: any) =>
+                v != null &&
+                typeof v === 'object' &&
+                v.$ref === undefined &&
+                v.properties != null &&
+                typeof v.properties === 'object',
+        );
 
-        // Find a property name present in ALL variants with a const value
-        const firstProps = Object.keys(variants[0].properties);
+        // Need at least one inline variant to detect a discriminator
+        if (inlineVariants.length === 0) return null;
+
+        // Find a property name present in ALL inline variants with a const value
+        const firstProps = Object.keys(inlineVariants[0].properties);
         for (const propName of firstProps) {
-            const propSchema = variants[0].properties[propName];
+            const propSchema = inlineVariants[0].properties[propName];
             const hasConst =
                 propSchema?.const !== undefined ||
                 (Array.isArray(propSchema?.enum) && propSchema.enum.length === 1);
 
             if (!hasConst) continue;
 
-            const allMatch = variants.every((v: any) => {
+            const allMatch = inlineVariants.every((v: any) => {
                 const p = v.properties?.[propName];
                 if (!p) return false;
                 return (
@@ -587,7 +587,7 @@ export class JsonSchemaImporter {
         name: string,
         obj: any,
         discriminatorField: string,
-    ): MatchField {
+    ): MatchField | CompositionField {
         const elements: any[] = obj.oneOf;
         const variants: Record<string, ObjectField | RefField> = {};
 
@@ -608,14 +608,8 @@ export class JsonSchemaImporter {
             } else if (Array.isArray(discProp?.enum) && discProp.enum.length === 1) {
                 variantKey = String(discProp.enum[0]);
             } else {
-                // Cannot determine variant key, fall through to composition
-                return {
-                    ...createBaseField(name, 'match', obj.description ?? ''),
-                    type: 'match',
-                    discriminator: discriminatorField,
-                    variants,
-                    ...this.universalModifiers(obj),
-                } as MatchField;
+                // Cannot determine variant key, fall back to generic composition
+                return this.importComposition(name, obj, 'oneOf');
             }
 
             // Import the variant schema as an object, stripping the discriminator property

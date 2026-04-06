@@ -61,14 +61,12 @@ export class LlmSchemaExporter implements Exporter<LlmSchemaResult> {
         // Set additionalProperties: false on all objects and ensure all props in required
         this.enforceStrictObjects(result, warnings);
 
-        // Convert discriminated union oneOf → anyOf and mark discriminator const values
-        this.convertDiscriminatedUnions(result);
+        // Convert discriminated union oneOf → anyOf and collect discriminator const paths
+        const discriminatorPaths = new Set<string>();
+        this.convertDiscriminatedUnions(result, '', discriminatorPaths);
 
-        // Strip unsupported keywords (preserves marked discriminator const)
-        this.stripUnsupportedKeywords(result, '', warnings);
-
-        // Clean up discriminator markers
-        this.removeDiscriminatorMarkers(result);
+        // Strip unsupported keywords (preserves discriminator const via path set)
+        this.stripUnsupportedKeywords(result, '', warnings, discriminatorPaths);
 
         // Validate nesting depth
         const depth = this.measureObjectDepth(result, 0);
@@ -259,22 +257,22 @@ export class LlmSchemaExporter implements Exporter<LlmSchemaResult> {
         }
     }
 
-    private stripUnsupportedKeywords(node: any, path: string, warnings: string[]): void {
+    private stripUnsupportedKeywords(node: any, path: string, warnings: string[], discriminatorPaths: Set<string>): void {
         if (node === null || node === undefined || typeof node !== 'object') {
             return;
         }
 
         if (Array.isArray(node)) {
             for (let i = 0; i < node.length; i++) {
-                this.stripUnsupportedKeywords(node[i], `${path}[${i}]`, warnings);
+                this.stripUnsupportedKeywords(node[i], `${path}[${i}]`, warnings, discriminatorPaths);
             }
             return;
         }
 
         for (const keyword of UNSUPPORTED_KEYWORDS) {
             if (keyword in node) {
-                // Preserve const on discriminator properties (marked by convertDiscriminatedUnions)
-                if (keyword === 'const' && node.__discriminatorConst) {
+                // Preserve const on discriminator properties tracked by path
+                if (keyword === 'const' && discriminatorPaths.has(path)) {
                     continue;
                 }
                 const fieldPath = path || 'root';
@@ -286,22 +284,22 @@ export class LlmSchemaExporter implements Exporter<LlmSchemaResult> {
         // Recurse
         for (const key of Object.keys(node)) {
             const childPath = path ? `${path}.${key}` : key;
-            this.stripUnsupportedKeywords(node[key], childPath, warnings);
+            this.stripUnsupportedKeywords(node[key], childPath, warnings, discriminatorPaths);
         }
     }
 
     /**
      * Detect discriminated unions (oneOf where variants share a property with const values)
-     * and convert them to anyOf. Mark discriminator const properties so they survive stripping.
+     * and convert them to anyOf. Collect discriminator const property paths into the provided Set.
      */
-    private convertDiscriminatedUnions(node: any): void {
+    private convertDiscriminatedUnions(node: any, path: string, discriminatorPaths: Set<string>): void {
         if (node === null || node === undefined || typeof node !== 'object') {
             return;
         }
 
         if (Array.isArray(node)) {
-            for (const item of node) {
-                this.convertDiscriminatedUnions(item);
+            for (let i = 0; i < node.length; i++) {
+                this.convertDiscriminatedUnions(node[i], `${path}[${i}]`, discriminatorPaths);
             }
             return;
         }
@@ -314,12 +312,16 @@ export class LlmSchemaExporter implements Exporter<LlmSchemaResult> {
                 node.anyOf = node.oneOf;
                 delete node.oneOf;
 
-                // Mark discriminator const properties so they survive stripping
-                for (const variant of node.anyOf) {
+                // Record discriminator const property paths so they survive stripping
+                for (let i = 0; i < node.anyOf.length; i++) {
+                    const variant = node.anyOf[i];
                     if (variant.properties && variant.properties[discriminator]) {
                         const discProp = variant.properties[discriminator];
                         if (discProp.const !== undefined) {
-                            discProp.__discriminatorConst = true;
+                            const discPath = path
+                                ? `${path}.anyOf[${i}].properties.${discriminator}`
+                                : `anyOf[${i}].properties.${discriminator}`;
+                            discriminatorPaths.add(discPath);
                         }
                     }
                 }
@@ -328,7 +330,8 @@ export class LlmSchemaExporter implements Exporter<LlmSchemaResult> {
 
         // Recurse into all values
         for (const key of Object.keys(node)) {
-            this.convertDiscriminatedUnions(node[key]);
+            const childPath = path ? `${path}.${key}` : key;
+            this.convertDiscriminatedUnions(node[key], childPath, discriminatorPaths);
         }
     }
 
@@ -351,36 +354,16 @@ export class LlmSchemaExporter implements Exporter<LlmSchemaResult> {
                     (v) => v.properties[propName] && v.properties[propName].const !== undefined
                 );
                 if (allHaveConst) {
-                    return propName;
+                    // Verify all const values are distinct
+                    const constValues = variants.map((v) => v.properties[propName].const);
+                    if (new Set(constValues).size === constValues.length) {
+                        return propName;
+                    }
                 }
             }
         }
 
         return null;
-    }
-
-    /**
-     * Remove __discriminatorConst markers from the schema after stripping is complete.
-     */
-    private removeDiscriminatorMarkers(node: any): void {
-        if (node === null || node === undefined || typeof node !== 'object') {
-            return;
-        }
-
-        if (Array.isArray(node)) {
-            for (const item of node) {
-                this.removeDiscriminatorMarkers(item);
-            }
-            return;
-        }
-
-        if ('__discriminatorConst' in node) {
-            delete node.__discriminatorConst;
-        }
-
-        for (const key of Object.keys(node)) {
-            this.removeDiscriminatorMarkers(node[key]);
-        }
     }
 
     private measureObjectDepth(node: any, currentLevel: number): number {

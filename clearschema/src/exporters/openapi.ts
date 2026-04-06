@@ -1,4 +1,4 @@
-import { Schema, MatchField, Field } from '../ast/types';
+import { Schema, MatchField, ObjectField, Field } from '../ast/types';
 import { Exporter, ExportOptions } from './types';
 import { exportJsonSchema } from './json-schema';
 
@@ -115,6 +115,17 @@ export class OpenAPIExporter implements Exporter<OpenAPISchema> {
             const prop = properties[field.name];
             if (prop?.oneOf) {
                 prop.discriminator = { propertyName: matchField.discriminator };
+            }
+        }
+
+        // Recurse into object fields to find nested match fields
+        if (field.type === 'object') {
+            const objectField = field as ObjectField;
+            const parentProp = properties[field.name];
+            if (parentProp?.properties) {
+                for (const childField of objectField.fields) {
+                    this.injectDiscriminatorForField(childField, parentProp.properties);
+                }
             }
         }
     }

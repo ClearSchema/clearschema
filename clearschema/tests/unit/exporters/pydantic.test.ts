@@ -340,6 +340,26 @@ describe('Pydantic Exporter', () => {
             expect(output).toContain('from pydantic import Discriminator');
         });
 
+        it('converts kebab-case and snake_case variant keys to PascalCase class names (Fix #3)', () => {
+            const matchField = makeMatchField('method', {
+                'credit-card': makeObjectVariant([
+                    { name: 'cardNumber', type: 'string', required: true, description: 'Card number' },
+                ]),
+                'bank_transfer': makeObjectVariant([
+                    { name: 'accountId', type: 'string', required: true, description: 'Account ID' },
+                ]),
+            });
+
+            const output = exportPydantic(makeSchema(matchField));
+
+            // Should produce valid PascalCase Python class names
+            expect(output).toContain('class CreditCardVariant(BaseModel):');
+            expect(output).toContain('class BankTransferVariant(BaseModel):');
+            // Should NOT contain hyphenated or snake_case class names
+            expect(output).not.toContain('class credit-cardVariant');
+            expect(output).not.toContain('class bank_transferVariant');
+        });
+
         it('exports $ref variant using ref name in union', () => {
             const refVariant: RefField = {
                 name: '',
