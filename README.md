@@ -4,9 +4,9 @@
 
 Your schema is a contract. Write it in a format humans can read and review. Generate the boring, repetitive code.
 
-[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/clearschema/clearschema)
-[![Tests](https://img.shields.io/badge/tests-232%20passing-brightgreen.svg)](https://github.com/clearschema/clearschema)
-[![Coverage](https://img.shields.io/badge/coverage-93%2B%25-brightgreen.svg)](https://github.com/clearschema/clearschema)
+[![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)](https://github.com/clearschema/clearschema)
+[![Tests](https://img.shields.io/badge/tests-548%20passing-brightgreen.svg)](https://github.com/clearschema/clearschema)
+[![Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen.svg)](https://github.com/clearschema/clearschema)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 ---
@@ -372,8 +372,8 @@ $defs:
 | 7. VS Code Extension | ✅ Complete | v0.2.0 |
 | 8. Documentation | ✅ Complete | v0.2.0 |
 
-**Current Version:** 0.5.0
-**Test Coverage:** 93%+ (465 tests passing)
+**Current Version:** 0.4.0
+**Test Coverage:** 85% (548 tests passing)
 **License:** MIT
 
 ---
@@ -409,7 +409,7 @@ $defs:
 3. **Target-agnostic core** - Parser produces universal AST; exporters handle mapping
 4. **Zero dependencies** - Hand-written parser, no runtime deps
 5. **Excellent errors** - Clear messages with line/column info
-6. **TDD approach** - 205 tests with 93.3% coverage
+6. **TDD approach** - 548 tests with 85% coverage
 
 ---
 
@@ -421,7 +421,7 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for gui
 
 ```bash
 # Clone the repository
-git clone https://github.com/clearschema/clearschema.git
+git clone https://github.com/ClearSchema/clearschema.git
 cd clearschema/clearschema
 
 # Install dependencies

@@ -4,6 +4,12 @@ All notable changes to `@clearschema/core` will be documented in this file.
 
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [0.4.1] - 2026-04-07
+
+### Fixed
+
+- Correct stale version, test count, and coverage numbers in README
+
 ## [0.4.0] - 2026-04-07
 
 ### Added
