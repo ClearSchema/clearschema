@@ -1,7 +1,7 @@
 name: Release
 on:
   push:
-    tags: ['@clearschema/core@*']
+    tags: ['@clearschema/**']
 jobs:
   publish:
     runs-on: ubuntu-latest
