@@ -1,4 +1,4 @@
-import type { Schema, Field, SchemaDefinition, MatchField } from '@clearschema/core';
+import type { Schema, Field, SchemaDefinition } from '@clearschema/core';
 
 export interface FieldSummary {
     name: string;
@@ -53,12 +53,10 @@ function summarizeField(field: Field): FieldSummary {
         case 'union':
             summary.types = field.types;
             break;
-        case 'match' as any: {
-            const matchField = field as unknown as MatchField;
-            summary.discriminator = matchField.discriminator;
-            summary.variants = Object.keys(matchField.variants);
+        case 'match':
+            summary.discriminator = field.discriminator;
+            summary.variants = Object.keys(field.variants);
             break;
-        }
     }
 
     return summary;
