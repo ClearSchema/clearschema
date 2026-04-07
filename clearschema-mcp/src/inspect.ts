@@ -39,13 +39,7 @@ function summarizeField(field: Field): FieldSummary {
 
     switch (field.type) {
         case 'object':
-            summary.fields = field.fields.map((f) => ({
-                name: f.name,
-                type: f.type,
-                required: f.required,
-                ...(f.description ? { description: f.description } : {}),
-                ...(f.type === 'ref' ? { ref: f.ref } : {}),
-            }));
+            summary.fields = field.fields.map(summarizeField);
             break;
         case 'array':
             summary.itemType = typeof field.itemType === 'string' ? field.itemType : field.itemType.type;
@@ -102,13 +96,7 @@ export function inspectSchema(schema: Schema): TypeSummary[] {
         summaries.push({
             name: '(root)',
             type: 'object',
-            fields: schema.fields.map((f) => ({
-                name: f.name,
-                type: f.type,
-                required: f.required,
-                ...(f.description ? { description: f.description } : {}),
-                ...(f.type === 'ref' ? { ref: f.ref } : {}),
-            })),
+            fields: schema.fields.map(summarizeField),
         });
     }
 

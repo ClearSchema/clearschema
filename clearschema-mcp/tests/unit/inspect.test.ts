@@ -25,7 +25,7 @@ describe('inspectSchema', () => {
         expect(result[1].fields).toHaveLength(2);
     });
 
-    it('handles nested object types', () => {
+    it('handles nested object types with full recursive structure', () => {
         const schema = parse(`$defs:
   User: object: A user
     name: string.required
@@ -41,6 +41,40 @@ describe('inspectSchema', () => {
         const profileField = userType.fields!.find((f) => f.name === 'profile');
         expect(profileField).toBeDefined();
         expect(profileField!.type).toBe('object');
+        // Verify nested fields are captured (not just name/type/required)
+        expect(profileField!.fields).toBeDefined();
+        expect(profileField!.fields).toHaveLength(2);
+        expect(profileField!.fields![0].name).toBe('bio');
+        expect(profileField!.fields![0].type).toBe('string');
+        expect(profileField!.fields![1].name).toBe('avatar');
+    });
+
+    it('handles array fields with itemType', () => {
+        const schema = parse(`$defs:
+  User: object: A user
+    tags: array: Tags
+      - string
+`);
+        expect(schema.errors).toBeUndefined();
+        const result = inspectSchema(schema);
+        const tagsField = result[0].fields!.find((f) => f.name === 'tags');
+        expect(tagsField).toBeDefined();
+        expect(tagsField!.type).toBe('array');
+        expect(tagsField!.itemType).toBe('string');
+    });
+
+    it('handles map fields with valueType', () => {
+        const schema = parse(`$defs:
+  Config: object: Config
+    metadata: map: Metadata
+      - string
+`);
+        expect(schema.errors).toBeUndefined();
+        const result = inspectSchema(schema);
+        const metaField = result[0].fields!.find((f) => f.name === 'metadata');
+        expect(metaField).toBeDefined();
+        expect(metaField!.type).toBe('map');
+        expect(metaField!.valueType).toBe('string');
     });
 
     it('handles match type (discriminated union)', () => {
