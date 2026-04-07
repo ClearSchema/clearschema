@@ -66,28 +66,24 @@ export const EXPORTER_MAP: Record<string, ExporterEntry> = {
 
 // --- Error formatting helpers ---
 
+function formatParseError(err: ParseError, prefix = ''): string {
+    const loc = err.location;
+    let msg = `${prefix}Line ${loc.start.line}, Col ${loc.start.column}: ${err.message}`;
+    if (err.hint) {
+        msg += ` (hint: ${err.hint})`;
+    }
+    return msg;
+}
+
 function formatParseErrors(errors: Error[]): string {
-    return errors.map((err) => {
-        if (err instanceof ParseError) {
-            const loc = err.location;
-            let msg = `Line ${loc.start.line}, Col ${loc.start.column}: ${err.message}`;
-            if (err.hint) {
-                msg += ` (hint: ${err.hint})`;
-            }
-            return msg;
-        }
-        return err.message;
-    }).join('\n');
+    return errors.map((err) =>
+        err instanceof ParseError ? formatParseError(err) : err.message,
+    ).join('\n');
 }
 
 function formatCatastrophicError(err: unknown): string {
     if (err instanceof ParseError) {
-        const loc = err.location;
-        let msg = `Parse error at line ${loc.start.line}, column ${loc.start.column}: ${err.message}`;
-        if (err.hint) {
-            msg += ` (hint: ${err.hint})`;
-        }
-        return msg;
+        return formatParseError(err, 'Parse error at ');
     }
     return `Parse error: ${err instanceof Error ? err.message : String(err)}`;
 }
@@ -141,6 +137,10 @@ server.tool(
     },
 );
 
+// Cast needed: MCP SDK's Zod generic inference triggers TS2589 "Type instantiation
+// is excessively deep" when inline Zod schemas with .describe() are passed to tool()
+// or registerTool(). This is a known SDK limitation. The cast is safe — parameter
+// types are manually annotated on the callback signature.
 (server.tool as any)(
     'compile_schema',
     'Compile ClearSchema source code into a target format. ' +
@@ -192,6 +192,7 @@ server.tool(
     },
 );
 
+// See compile_schema comment for why the cast is needed.
 (server.tool as any)(
     'validate_schema',
     'Check ClearSchema source for syntax errors without producing output. ' +
@@ -213,6 +214,7 @@ server.tool(
     },
 );
 
+// See compile_schema comment for why the cast is needed.
 (server.tool as any)(
     'import_json_schema',
     'Convert a JSON Schema document into ClearSchema syntax. ' +
@@ -265,6 +267,7 @@ server.tool(
     },
 );
 
+// See compile_schema comment for why the cast is needed.
 (server.tool as any)(
     'inspect_schema',
     'Parse ClearSchema source and return a structured summary of defined types, ' +
