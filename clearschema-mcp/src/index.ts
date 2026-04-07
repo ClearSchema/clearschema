@@ -232,9 +232,21 @@ server.tool(
             };
         }
 
-        // Import
-        const result = importJsonSchema(parsed);
-        const clearSource = exportClearSchema(result.schema);
+        // Import and serialize
+        let clearSource: string;
+        let result: ReturnType<typeof importJsonSchema>;
+        try {
+            result = importJsonSchema(parsed);
+            clearSource = exportClearSchema(result.schema);
+        } catch (err) {
+            return {
+                content: [{
+                    type: 'text',
+                    text: `Import error: ${err instanceof Error ? err.message : String(err)}`,
+                }],
+                isError: true,
+            };
+        }
 
         // Check for empty result (valid JSON but not a meaningful JSON Schema)
         const hasContent = (result.schema.definitions && result.schema.definitions.length > 0) ||

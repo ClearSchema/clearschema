@@ -107,7 +107,7 @@ export function inspectSchema(schema: Schema): TypeSummary[] {
                 type: f.type,
                 required: f.required,
                 ...(f.description ? { description: f.description } : {}),
-                ...(f.type === 'ref' ? { ref: (f as any).ref } : {}),
+                ...(f.type === 'ref' ? { ref: f.ref } : {}),
             })),
         });
     }
