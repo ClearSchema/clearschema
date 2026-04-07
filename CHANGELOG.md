@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-04-06
+
+### Added
+
+- **MCP Server (`@clearschema/mcp`)** — new package exposing ClearSchema capabilities as MCP tools for AI editors (Claude Desktop, Cursor, Windsurf)
+  - `list_exporters` — discover available output formats
+  - `compile_schema` — compile ClearSchema source to any of 7 target formats
+  - `validate_schema` — syntax checking with structured diagnostics
+  - `import_json_schema` — reverse import JSON Schema to ClearSchema syntax
+  - `inspect_schema` — introspect schema type definitions without compilation
+  - Zero configuration, stdio transport, runnable via `npx @clearschema/mcp`
+- **Documentation** — new website pages for MCP server reference, ClearSchema exporter, discriminated unions guide, maps guide, and cross-file imports guide
+
 ## [0.7.0] - 2026-04-06
 
 ### Changed

@@ -25,3 +25,10 @@ jobs:
         working-directory: clearschema
       - run: npm test -- --coverage
         working-directory: clearschema
+      # MCP Server
+      - run: npm install
+        working-directory: clearschema-mcp
+      - run: npm run build
+        working-directory: clearschema-mcp
+      - run: npm test
+        working-directory: clearschema-mcp
