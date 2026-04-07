@@ -25,7 +25,7 @@ focus: open-ended
 **Downsides:** Risks pigeonholing as "AI-only." Provider requirements shift. MCP is still early-stage.
 **Confidence:** 85%
 **Complexity:** Medium (three small pieces, not one big one)
-**Status:** Unexplored
+**Status:** Explored (brainstorm 2026-04-06)
 
 ### 2. Intelligent Schema Editor (Target-Aware Linter + Rich LSP Hover)
 **Description:** Surface target-specific constraint warnings as LSP diagnostics ("format: email is stripped by LLM exporter"). Extend hover to show all 6 exporter outputs for the field under cursor. One coherent "smart editor" feature built on existing LSP infrastructure.
@@ -41,7 +41,7 @@ focus: open-ended
 **Downsides:** Grammar and parser changes required. Must handle across all 6+ exporters consistently. Design challenge in finding clean DSL syntax for conditionals.
 **Confidence:** 78%
 **Complexity:** High
-**Status:** Explored (brainstorm 2026-04-06)
+**Status:** Done (implemented 2026-04-06, merged to main)
 
 ### 4. Schema Diffing & Breaking-Change Detection
 **Description:** `clearschema diff old.clear new.clear` comparing two schemas and categorizing changes as breaking/compatible per target. Output as text, JSON, or CI annotations. The multi-target AST enables per-target diff ("breaking in Pydantic, compatible in TypeScript") that is structurally impossible without ClearSchema's central representation.
@@ -51,28 +51,36 @@ focus: open-ended
 **Complexity:** Medium
 **Status:** Unexplored
 
-### 5. Watch Mode + Multi-File Batch Compilation
-**Description:** `clearschema compile 'schemas/**/*.clear' -f typescript -o types/` with `--watch` flag. Dependency graph tracks imports for incremental rebuilds — only changed files and their dependents are re-emitted.
-**Rationale:** Table-stakes DX for any file-based DSL. A developer evaluating the tool who must re-run the CLI manually after every save will bounce. The resolver already builds an import graph; watch mode is a small lift with outsized first-impression impact. The existing `--watch` concept was deferred in the initial ideation as a subtask — now unblocked.
-**Downsides:** Undifferentiated — every build tool has this. Creates no lock-in.
-**Confidence:** 90%
-**Complexity:** Low
-**Status:** Unexplored
-
-### 6. Constraint Propagation Warnings
-**Description:** Detect logically impossible constraint combinations at parse time: `min > max`, `exclusiveRange` with equal bounds, `enum` with single value that should be `const`, conflicting constraints across composition types. Surface as parser warnings with source locations.
-**Rationale:** v0.7.0 already validates constraint types (rejecting `min` on boolean). Cross-constraint logic is the natural next step. Low cost, high quality signal. Makes the tool feel intelligent — "ClearSchema knows your schema better than you do." Reinforces the brand as a tool that catches errors early.
-**Downsides:** Edge cases in composition types. Must not over-warn on intentional patterns.
-**Confidence:** 88%
-**Complexity:** Low
-**Status:** Unexplored
-
-### 7. TypeScript Reverse Importer
+### 5. TypeScript Reverse Importer
 **Description:** `clearschema import --from typescript types.ts` parsing interface/type alias declarations into .clear files using the TypeScript compiler API (already a devDep).
 **Rationale:** The JSON Schema importer proves the architecture. TypeScript is the dominant language in the target audience. Removes the blank-page barrier: import existing types, get JSON Schema + Pydantic + Zod + LLM schema for free. This is an onramp, not a feature — it converts "I'd have to rewrite everything" into "point at your types.ts."
 **Downsides:** TypeScript types can be arbitrarily complex (generics, conditional types, mapped types). Must scope to interface/type alias only. TypeScript compiler API adds weight.
 **Confidence:** 70%
 **Complexity:** Medium
+**Status:** Unexplored
+
+### 8. MCP Server (`@clearschema/mcp`)
+**Description:** MCP server exposing `compile`, `validate`, and `import` as tools callable by any MCP client (Claude Desktop, Cursor, Windsurf). An AI agent can call `clearschema.compile` to generate LLM-ready JSON Schema, TypeScript types, or Pydantic models without the developer touching the CLI. Ship as `npx @clearschema/mcp`.
+**Rationale:** Makes ClearSchema part of the daily workflow — usable from the editor without context-switching. The programmatic API is already cleanly factored; wrapping it in MCP tool handlers is thin glue. Demonstrates modern AI-native integration patterns. Genuinely useful for personal LLM structured output work.
+**Downsides:** MCP ecosystem is still early. Another package to maintain.
+**Confidence:** 85%
+**Complexity:** Low-Medium
+**Status:** Explored (brainstorm 2026-04-06)
+
+### 9. Watch Mode + Multi-File Batch Compilation
+**Description:** `clearschema compile 'schemas/**/*.clear' -f typescript -o types/` with `--watch` flag. Dependency graph tracks imports for incremental rebuilds — only changed files and their dependents are re-emitted.
+**Rationale:** Table-stakes DX for actually using ClearSchema in projects. The difference between "I use this" and "I used this once." Low effort, high daily-use impact. The resolver already builds an import graph; watch mode is a small lift.
+**Downsides:** Undifferentiated — every build tool has this.
+**Confidence:** 90%
+**Complexity:** Low
+**Status:** Unexplored
+
+### 10. Constraint Propagation Warnings
+**Description:** Detect logically impossible constraint combinations at parse time: `min > max`, `exclusiveRange` with equal bounds, `enum` with single value that should be `const`, conflicting constraints across composition types. Surface as parser warnings with source locations.
+**Rationale:** Deep, thoughtful engineering that demonstrates attention to edge cases. v0.7.0 already validates constraint types; cross-constraint logic is the natural next step. Makes the tool feel intelligent. Low complexity, high quality signal.
+**Downsides:** Edge cases in composition types. Must not over-warn on intentional patterns.
+**Confidence:** 88%
+**Complexity:** Low
 **Status:** Unexplored
 
 ## Rejection Summary
@@ -102,3 +110,6 @@ focus: open-ended
 ## Session Log
 - 2026-04-06: Fresh open-ended ideation — 48 generated, 7 survived
 - 2026-04-06: Selected #3 (Discriminated Unions) for brainstorm — 48 generated (6 agents × 8), deduped to 26 unique + 5 cross-cutting combos = 31 evaluated, 7 survived. Two adversarial critics (pragmatism + differentiation angles). Key theme: pre-adoption stage demands ideas that drive discovery and first-use, not governance or infrastructure.
+- 2026-04-06: #3 (Discriminated Unions) implemented and merged to main. Updated status to Done.
+- 2026-04-06: Selected #1 (AI-Native Schema Tool) for brainstorm.
+- 2026-04-06: Reframed ideation from adoption-first to personal-utility + engineering-quality. Ran 5-agent divergent ideation (40 raw ideas) focused on adoption, filtered aggressively, then pivoted when goals clarified: project is for personal use + LinkedIn credibility, not mass adoption. Added #8 (MCP Server), #9 (Watch Mode), #10 (Constraint Propagation Warnings). Consolidated #5/#6 into #9/#10 with updated rationale. Dropped marketing/content/launch ideas as out of scope. Selected #8 (MCP Server) for brainstorm.

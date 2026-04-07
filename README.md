@@ -166,6 +166,33 @@ const withImports = await resolveImports(schema, {
 });
 ```
 
+### MCP Server (AI Editor Integration)
+
+ClearSchema includes an MCP server that makes all capabilities available to AI editors like Claude Desktop, Cursor, and Windsurf.
+
+```bash
+npm install @clearschema/mcp
+```
+
+**Claude Desktop configuration** (`claude_desktop_config.json`):
+```json
+{
+  "mcpServers": {
+    "clearschema": {
+      "command": "npx",
+      "args": ["-y", "@clearschema/mcp"]
+    }
+  }
+}
+```
+
+**Available tools:**
+- `list_exporters` — discover available output formats
+- `compile_schema` — compile ClearSchema source to any format
+- `validate_schema` — check syntax without producing output
+- `import_json_schema` — convert JSON Schema to ClearSchema
+- `inspect_schema` — introspect type definitions
+
 ---
 
 ## Why ClearSchema?

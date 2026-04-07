@@ -1,0 +1,24 @@
+{
+  "name": "@clearschema/mcp",
+  "version": "0.1.0",
+  "description": "MCP server for ClearSchema - compile, validate, and import schemas via AI editors",
+  "main": "dist/index.js",
+  "bin": {
+    "clearschema-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "jest --no-coverage"
+  },
+  "dependencies": {
+    "@clearschema/core": "file:../clearschema",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.0.0",
+    "jest": "^30.0.0",
+    "ts-jest": "^29.0.0",
+    "typescript": "^5.9.0"
+  }
+}
